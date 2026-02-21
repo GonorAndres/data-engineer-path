@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.key
+credentials.json
+service-account*.json
+
+# Data files (keep small samples, ignore large files)
+*.csv
+*.parquet
+*.avro
+!**/sample_data/*.csv
+!**/sample_data/*.parquet
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# Obsidian (personal config, not needed in git)
+.obsidian/
+
+# Subagent working files
+subagents_outputs/
