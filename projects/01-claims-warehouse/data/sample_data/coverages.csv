@@ -1,0 +1,6 @@
+coverage_type,coverage_category,description
+auto,property_casualty,"Seguro de automovil: colision, robo, responsabilidad civil"
+home,property_casualty,"Seguro de hogar: incendio, robo, desastres naturales"
+liability,casualty,"Seguro de responsabilidad civil: danos a terceros, negligencia profesional"
+health,health,"Seguro de gastos medicos: hospitalizacion, cirugia, emergencias"
+life,life,"Seguro de vida: muerte natural o accidental, beneficiarios designados"

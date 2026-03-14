@@ -29,6 +29,10 @@ service-account*.json
 !**/sample_data/*.csv
 !**/sample_data/*.parquet
 
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
 # Jupyter
 .ipynb_checkpoints/
 

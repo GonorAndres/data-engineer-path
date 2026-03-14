@@ -18,6 +18,7 @@ Follow this order. Each topic builds on the previous ones.
 2. [[sql-patterns]] -- Advanced SQL beyond SELECT: window functions, CTEs, recursive queries
 3. [[etl-vs-elt]] -- The two paradigms and when each makes sense
 4. [[data-warehouse-concepts]] -- What a warehouse is, why it exists, how it differs from a database
+5. [[loss-triangle-construction]] -- Actuarial loss triangles: the portfolio differentiator
 
 ### Phase 2: Core Infrastructure
 5. [[storage-layer]] -- Where data lives: object storage, databases, lakes, lakehouses
@@ -32,6 +33,7 @@ Follow this order. Each topic builds on the previous ones.
 12. [[gcs-as-data-lake]] -- Cloud Storage patterns for data engineering
 13. [[pubsub-guide]] -- Real-time messaging on GCP
 14. [[dataform-guide]] -- SQL transformation workflows (GCP's dbt alternative)
+15. [[duckdb-local-dev]] -- DuckDB for local development and testing
 
 ### Phase 4: Production Practices
 15. [[ci-cd-for-data]] -- Testing and deploying data pipelines
@@ -50,4 +52,5 @@ Follow this order. Each topic builds on the previous ones.
 - [[decisions/storage-format-selection]]
 
 ## Projects
-- See `../projects/` for hands-on portfolio work
+- [[projects/01-claims-warehouse]] -- Insurance claims data warehouse (star schema, loss triangles, DuckDB)
+- See `../projects/` for all portfolio work

@@ -1,0 +1,52 @@
+-- Report: Loss Development Triangle
+-- Pivots cumulative paid losses by accident year and development year.
+-- This is the foundational actuarial analysis for reserving (IBNR estimation).
+--
+-- Reading the triangle:
+--   - Rows = accident years (when the claim occurred)
+--   - Columns = development years (time since accident)
+--   - Values = cumulative paid losses at each development point
+--   - The diagonal represents the most recent valuation
+--   - Empty cells in lower-right = future development (unknown)
+
+CREATE OR REPLACE TABLE rpt_loss_triangle AS
+WITH incremental_by_dev AS (
+    -- Sum all payments by accident year and development year
+    SELECT
+        accident_year,
+        development_year,
+        SUM(payment_amount) AS incremental_paid
+    FROM fct_claim_payments
+    WHERE development_year >= 0
+    GROUP BY accident_year, development_year
+),
+cumulative_by_dev AS (
+    -- Convert to cumulative using window function
+    SELECT
+        accident_year,
+        development_year,
+        incremental_paid,
+        SUM(incremental_paid) OVER (
+            PARTITION BY accident_year
+            ORDER BY development_year
+        ) AS cumulative_paid
+    FROM incremental_by_dev
+)
+-- Pivot into triangle format
+SELECT
+    accident_year,
+    MAX(CASE WHEN development_year = 0 THEN cumulative_paid END) AS dev_year_0,
+    MAX(CASE WHEN development_year = 1 THEN cumulative_paid END) AS dev_year_1,
+    MAX(CASE WHEN development_year = 2 THEN cumulative_paid END) AS dev_year_2,
+    MAX(CASE WHEN development_year = 3 THEN cumulative_paid END) AS dev_year_3,
+    MAX(CASE WHEN development_year = 4 THEN cumulative_paid END) AS dev_year_4,
+    MAX(CASE WHEN development_year = 5 THEN cumulative_paid END) AS dev_year_5,
+    -- Latest diagonal value (most recent cumulative paid)
+    MAX(cumulative_paid) AS latest_cumulative,
+    -- Count of claims contributing
+    (SELECT COUNT(DISTINCT claim_id)
+     FROM fct_claim_payments fp
+     WHERE fp.accident_year = cumulative_by_dev.accident_year) AS claim_count
+FROM cumulative_by_dev
+GROUP BY accident_year
+ORDER BY accident_year;

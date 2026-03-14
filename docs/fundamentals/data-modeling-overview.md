@@ -105,3 +105,5 @@ Following [[sql-patterns]] and dbt conventions:
 - [[etl-vs-elt]] -- How data moves into these models
 - [[bigquery-guide]] -- How BigQuery's architecture affects modeling choices
 - [[decisions/storage-format-selection]] -- Parquet, Avro, and how format affects modeling
+- [[loss-triangle-construction]] -- How the star schema enables actuarial loss triangles
+- [[duckdb-local-dev]] -- Develop and test dimensional models locally with DuckDB
