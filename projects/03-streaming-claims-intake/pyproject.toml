@@ -1,0 +1,31 @@
+[project]
+name = "streaming-claims-intake"
+version = "0.1.0"
+description = "Event-driven claims intake with Pub/Sub, Cloud Run subscriber, and Beam batch aggregations"
+requires-python = ">=3.10"
+dependencies = [
+    "google-cloud-pubsub>=2.21.0",
+    "google-cloud-bigquery>=3.20.0",
+    "apache-beam[gcp]>=2.56.0",
+    "faker>=25.0.0",
+    "numpy>=1.26.0",
+    "flask>=3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]

@@ -1,0 +1,29 @@
+# =============================================================================
+# Example Terraform Variables
+# =============================================================================
+# Copy this file to terraform.tfvars and fill in your values:
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# NEVER commit terraform.tfvars -- it may contain sensitive values.
+# The .gitignore already excludes *.tfvars files.
+
+# Required: your GCP project ID
+project_id = "my-gcp-project-id"
+
+# Optional: override defaults
+region      = "us-central1"
+environment = "dev" # "dev" or "prod"
+
+# Monthly billing budget in USD (alerts at 50%, 80%, 100%)
+billing_budget_amount = 100
+
+# GitHub repository for Workload Identity Federation (CI/CD)
+# Format: "owner/repo"
+github_repo = "your-username/data-engineer-path"
+
+# Container image for Cloud Run (override after first Docker build)
+# Default is a placeholder; set this to your Artifact Registry image:
+# container_image = "us-central1-docker.pkg.dev/my-project/claims-pipeline/elt-pipeline:latest"
+
+# Pub/Sub push endpoint (set after Cloud Run subscriber is deployed)
+# pubsub_push_endpoint = "https://claims-subscriber-abc123.run.app/push"
