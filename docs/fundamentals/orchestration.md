@@ -135,6 +135,8 @@ This is the #1 reliability principle in data engineering. If a task fails and yo
 
 ## Related
 - [[cloud-composer-guide]] -- Deep dive on managed Airflow on GCP
+- [[dagster-local-guide]] -- Dagster for local development orchestration
+- [[cost-effective-orchestration]] -- Cloud Scheduler + Cloud Run as a cheap alternative to Composer
 - [[etl-vs-elt]] -- Orchestration schedules both ETL and ELT workflows
 - [[ci-cd-for-data]] -- Deploying and testing DAGs
 - [[data-quality]] -- Integrating quality checks into orchestrated pipelines

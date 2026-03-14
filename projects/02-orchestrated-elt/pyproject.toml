@@ -1,0 +1,25 @@
+[project]
+name = "orchestrated-elt"
+version = "0.1.0"
+description = "Dagster orchestration for the insurance claims ELT pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "dagster>=1.7.0",
+    "dagster-webserver>=1.7.0",
+    "duckdb>=1.0.0",
+    "faker>=25.0.0",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "dagster-webserver>=1.7.0",
+]
+
+[tool.dagster]
+module_name = "dagster_pipeline.definitions"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

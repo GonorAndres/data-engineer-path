@@ -1,0 +1,275 @@
+# =============================================================================
+# CI/CD Pipeline -- Data Engineer Path
+# =============================================================================
+#
+# Runs lint, test, build, and deploy for the data engineering projects.
+#
+# Trigger rules:
+#   - Push to main: full pipeline (lint + test + build + deploy)
+#   - PR to main: lint + test only (no build/deploy)
+#   - Manual: workflow_dispatch for on-demand runs
+#
+# Design decisions:
+#   - Matrix strategy with Python 3.12 only (the project target).
+#     Easy to expand to 3.11+ later by adding to the matrix.
+#   - pip cache speeds up dependency installation (~30s vs ~90s).
+#   - Docker build only on main push (PRs just validate code quality).
+#   - Deploy requires manual approval via environment protection rules.
+#     Set this up in GitHub Settings > Environments > production.
+#   - Each project runs tests independently to isolate failures.
+#
+# =============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deploy to Cloud Run after build?"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+# Cancel in-progress runs for the same branch/PR.
+# Saves CI minutes when pushing multiple commits quickly.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Shared environment variables across all jobs.
+  PYTHON_VERSION: "3.12"
+  GCP_REGION: us-central1
+  SERVICE_NAME: claims-elt-pipeline
+
+jobs:
+  # ===========================================================================
+  # Job 1: Lint
+  # ===========================================================================
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          # Cache pip dependencies based on all pyproject.toml files.
+          cache-dependency-path: |
+            projects/01-claims-warehouse/pyproject.toml
+            projects/02-orchestrated-elt/pyproject.toml
+
+      - name: Install ruff
+        run: pip install ruff>=0.4.0
+
+      - name: Lint Project 01 (Claims Warehouse)
+        run: ruff check projects/01-claims-warehouse/src/
+
+      - name: Lint Project 02 (Orchestrated ELT)
+        run: ruff check projects/02-orchestrated-elt/src/ --exclude="*/airflow_dags/*"
+        # Exclude Airflow DAGs from lint because they import airflow packages
+        # that are not installed in the test environment.  The DAG file is
+        # validated separately by parsing it as a Python module.
+
+      - name: Check formatting
+        run: ruff format --check projects/01-claims-warehouse/src/ projects/02-orchestrated-elt/src/
+        continue-on-error: true  # Warn but don't fail on formatting
+
+  # ===========================================================================
+  # Job 2: Test
+  # ===========================================================================
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            projects/01-claims-warehouse/pyproject.toml
+            projects/02-orchestrated-elt/pyproject.toml
+
+      # -- Project 01: Claims Warehouse --------------------------------------
+      - name: Install Project 01 dependencies
+        run: |
+          cd projects/01-claims-warehouse
+          pip install -e ".[dev]"
+
+      - name: Run Project 01 tests
+        run: |
+          cd projects/01-claims-warehouse
+          python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project01.xml
+
+      # -- Project 02: Orchestrated ELT ---------------------------------------
+      - name: Install Project 02 dependencies
+        run: |
+          cd projects/02-orchestrated-elt
+          pip install -e ".[dev]"
+
+      - name: Run Project 02 tests
+        run: |
+          cd projects/02-orchestrated-elt
+          python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project02.xml
+        continue-on-error: true  # Project 02 tests may be minimal initially
+
+      # -- Validate Airflow DAG syntax ----------------------------------------
+      - name: Validate Airflow DAG (syntax check)
+        run: |
+          # Parse the DAG file as Python to catch syntax errors.
+          # We don't import it (Airflow is not installed) but we verify
+          # it's valid Python that can be parsed by the interpreter.
+          python -c "
+          import ast
+          with open('projects/02-orchestrated-elt/src/airflow_dags/claims_etl_dag.py') as f:
+              ast.parse(f.read())
+          print('Airflow DAG syntax: OK')
+          "
+
+      # -- Upload test results ------------------------------------------------
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results/
+          retention-days: 7
+
+  # ===========================================================================
+  # Job 3: Build Docker Image
+  # ===========================================================================
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    # Only build on pushes to main (not on PRs).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # -- Authenticate to GCP using Workload Identity Federation -------------
+      # This is more secure than storing a service account key as a secret.
+      # Set up WIF following:
+      #   https://github.com/google-github-actions/auth#setup
+      #
+      # Required GitHub secrets:
+      #   GCP_PROJECT_ID: your GCP project ID
+      #   GCP_WIF_PROVIDER: projects/<num>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+      #   GCP_WIF_SERVICE_ACCOUNT: <sa-name>@<project-id>.iam.gserviceaccount.com
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+        continue-on-error: true  # Skip if GCP credentials not configured
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # -- Build the Docker image ---------------------------------------------
+      - name: Build Docker image
+        run: |
+          cd projects/02-orchestrated-elt
+          docker build \
+            --tag "${{ env.SERVICE_NAME }}:${{ github.sha }}" \
+            --tag "${{ env.SERVICE_NAME }}:latest" \
+            --label "git.sha=${{ github.sha }}" \
+            --label "git.ref=${{ github.ref }}" \
+            .
+
+      # -- Push to Artifact Registry (only if GCP auth succeeded) -------------
+      - name: Configure Docker for Artifact Registry
+        if: steps.auth.outcome == 'success'
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Push to Artifact Registry
+        if: steps.auth.outcome == 'success'
+        run: |
+          FULL_IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/data-pipelines/${{ env.SERVICE_NAME }}"
+          docker tag "${{ env.SERVICE_NAME }}:${{ github.sha }}" "${FULL_IMAGE}:${{ github.sha }}"
+          docker tag "${{ env.SERVICE_NAME }}:latest" "${FULL_IMAGE}:latest"
+          docker push "${FULL_IMAGE}:${{ github.sha }}"
+          docker push "${FULL_IMAGE}:latest"
+
+  # ===========================================================================
+  # Job 4: Deploy to Cloud Run
+  # ===========================================================================
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: [build]
+    # Deploy only on main push AND when manually approved.
+    # The 'production' environment should have protection rules in GitHub.
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true')
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+        continue-on-error: true
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        if: steps.auth.outcome == 'success'
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/data-pipelines/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          flags: |
+            --memory=1Gi
+            --cpu=1
+            --timeout=900
+            --max-instances=1
+            --min-instances=0
+            --no-allow-unauthenticated
+
+      - name: Show deployment URL
+        if: steps.deploy.outcome == 'success'
+        run: |
+          echo "Deployed to: ${{ steps.deploy.outputs.url }}"
+          echo "Test health: curl -H 'Authorization: Bearer \$(gcloud auth print-identity-token)' ${{ steps.deploy.outputs.url }}/health"

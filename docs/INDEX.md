@@ -34,6 +34,7 @@ Follow this order. Each topic builds on the previous ones.
 13. [[pubsub-guide]] -- Real-time messaging on GCP
 14. [[dataform-guide]] -- SQL transformation workflows (GCP's dbt alternative)
 15. [[duckdb-local-dev]] -- DuckDB for local development and testing
+16. [[dagster-local-guide]] -- Dagster for local orchestration
 
 ### Phase 4: Production Practices
 15. [[ci-cd-for-data]] -- Testing and deploying data pipelines
@@ -53,4 +54,8 @@ Follow this order. Each topic builds on the previous ones.
 
 ## Projects
 - [[projects/01-claims-warehouse]] -- Insurance claims data warehouse (star schema, loss triangles, DuckDB)
+- [[projects/02-orchestrated-elt]] -- Dagster + Airflow + Cloud Run orchestration
 - See `../projects/` for all portfolio work
+
+## Architecture
+- [[cost-effective-orchestration]] -- Cloud Scheduler + Cloud Run vs Composer ($0.10/month vs $400/month)

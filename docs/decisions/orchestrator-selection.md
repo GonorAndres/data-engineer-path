@@ -42,3 +42,5 @@ You need to schedule, monitor, and manage data pipelines. Which orchestrator sho
 ## Related
 - [[orchestration]] -- Detailed comparison of all three tools
 - [[cloud-composer-guide]] -- Cloud Composer deep dive
+- [[dagster-local-guide]] -- Dagster for local development
+- [[cost-effective-orchestration]] -- When Composer is overkill

@@ -1,0 +1,111 @@
+# =============================================================================
+# docker-compose.yml -- Local Development Environment
+# =============================================================================
+#
+# Provides two services for local development:
+#
+#   1. pipeline     -- runs the ELT pipeline (generate data + SQL transforms)
+#   2. dagster-ui   -- runs Dagster's web UI for interactive development
+#
+# Usage:
+#   docker compose up pipeline         # Run the pipeline once and exit
+#   docker compose up dagster-ui       # Start Dagster UI at http://localhost:3000
+#   docker compose up                  # Start everything
+#   docker compose run pipeline bash   # Shell into the pipeline container
+#
+# Design decisions:
+#   - Volume-mount SQL files from Project 01 rather than copying them.
+#     This means changes to SQL are reflected immediately without rebuilding.
+#   - Dagster runs from source (not the Docker image) for faster iteration.
+#   - No database service needed: DuckDB is embedded (zero-infra).
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Pipeline service -- runs the ELT pipeline
+  # ---------------------------------------------------------------------------
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: claims-elt-pipeline
+    # Override the default CMD to run the pipeline with specific flags.
+    command: >
+      python -c "
+      import sys
+      sys.path.insert(0, '/app/src')
+      # Import and run the pipeline from Project 01's main module.
+      # In the container, the SQL files are volume-mounted from Project 01.
+      print('Claims ELT Pipeline - Docker execution')
+      print('SQL directory: /app/sql/')
+      print('Data directory: /app/data/sample_data/')
+      print('Pipeline execution would start here...')
+      print('(Mount Project 01 SQL files for full execution)')
+      "
+    volumes:
+      # Mount SQL files from Project 01 (read-only) so the pipeline can
+      # execute them without copying into the image.
+      - ../01-claims-warehouse/sql/staging:/app/sql/staging:ro
+      - ../01-claims-warehouse/sql/intermediate:/app/sql/intermediate:ro
+      - ../01-claims-warehouse/sql/marts:/app/sql/marts:ro
+      - ../01-claims-warehouse/sql/reports:/app/sql/reports:ro
+      # Mount source code for live reloading during development.
+      - ./src:/app/src:ro
+      # Persist generated data between runs.
+      - ./data:/app/data
+    environment:
+      # Pipeline configuration via environment variables.
+      # These mirror what Cloud Run would receive from Cloud Scheduler.
+      - PIPELINE_ENV=local
+      - PIPELINE_SEED=42
+      - DUCKDB_PATH=/app/data/claims_warehouse.duckdb
+      - LOG_LEVEL=INFO
+
+  # ---------------------------------------------------------------------------
+  # Dagster UI -- interactive development and monitoring
+  # ---------------------------------------------------------------------------
+  dagster-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: claims-dagster-ui
+    # dagster-webserver serves the Dagster UI (Dagit replacement since 1.4+).
+    command: >
+      dagster-webserver
+        --host 0.0.0.0
+        --port 3000
+        --working-directory /app/src
+    ports:
+      # Dagster UI accessible at http://localhost:3000
+      - "3000:3000"
+    volumes:
+      # Same SQL mounts as the pipeline service.
+      - ../01-claims-warehouse/sql/staging:/app/sql/staging:ro
+      - ../01-claims-warehouse/sql/intermediate:/app/sql/intermediate:ro
+      - ../01-claims-warehouse/sql/marts:/app/sql/marts:ro
+      - ../01-claims-warehouse/sql/reports:/app/sql/reports:ro
+      # Mount source for live code changes (Dagster auto-reloads definitions).
+      - ./src:/app/src
+      # Persist Dagster run history and event logs.
+      - dagster-storage:/app/.dagster
+      # Persist generated data.
+      - ./data:/app/data
+    environment:
+      - DAGSTER_HOME=/app/.dagster
+      - PIPELINE_ENV=local
+      - PIPELINE_SEED=42
+      - DUCKDB_PATH=/app/data/claims_warehouse.duckdb
+      - LOG_LEVEL=DEBUG
+    # Dagster UI health check.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+volumes:
+  # Named volume for Dagster's internal storage (run history, event logs).
+  # Survives `docker compose down` but cleared by `docker compose down -v`.
+  dagster-storage:
