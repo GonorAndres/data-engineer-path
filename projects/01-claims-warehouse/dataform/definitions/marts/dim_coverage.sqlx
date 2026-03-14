@@ -1,0 +1,13 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_analytics" : "dev_claims_analytics",
+  description: "Coverage type dimension. Static reference data.",
+  tags: ["marts", "dimension"]
+}
+
+SELECT
+    ROW_NUMBER() OVER (ORDER BY coverage_type) AS coverage_key,
+    coverage_type,
+    coverage_category,
+    description
+FROM ${ref("stg_coverages")}

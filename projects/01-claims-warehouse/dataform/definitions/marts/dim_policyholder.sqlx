@@ -1,0 +1,24 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_analytics" : "dev_claims_analytics",
+  description: "Policyholder dimension with demographics. One row per policyholder.",
+  tags: ["marts", "dimension"],
+  assertions: {
+    uniqueKey: ["policyholder_id"]
+  }
+}
+
+SELECT
+    policyholder_id,
+    first_name,
+    last_name,
+    CONCAT(first_name, ' ', last_name) AS full_name,
+    date_of_birth,
+    DATE_DIFF(registration_date, date_of_birth, YEAR) AS age_at_registration,
+    DATE_DIFF(DATE '${dataform.projectConfig.vars.valuation_date}', date_of_birth, YEAR) AS current_age,
+    gender,
+    state_code,
+    city,
+    occupation,
+    registration_date
+FROM ${ref("stg_policyholders")}

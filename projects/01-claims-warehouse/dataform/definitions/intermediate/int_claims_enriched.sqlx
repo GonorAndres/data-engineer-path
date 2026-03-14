@@ -1,0 +1,51 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_intermediate" : "dev_claims_intermediate",
+  description: "Claims enriched with policy and coverage context. One row per claim.",
+  tags: ["intermediate"],
+  bigquery: {
+    partitionBy: "accident_date",
+    clusterBy: ["coverage_type", "claim_status"]
+  }
+}
+
+WITH claim_policy AS (
+    SELECT
+        c.claim_id,
+        c.policy_id,
+        c.claim_number,
+        c.accident_date,
+        c.report_date,
+        c.close_date,
+        c.claim_status,
+        c.cause_of_loss,
+        c.initial_reserve,
+        c.current_reserve,
+        c.report_delay_days,
+        c.accident_year,
+        c.accident_quarter,
+        p.policyholder_id,
+        p.policy_number,
+        p.coverage_type,
+        p.effective_date AS policy_effective_date,
+        p.expiration_date AS policy_expiration_date,
+        p.annual_premium,
+        p.deductible,
+        p.coverage_limit,
+        p.status AS policy_status,
+        cov.coverage_category,
+        cov.description AS coverage_description
+    FROM ${ref("stg_claims")} c
+    INNER JOIN ${ref("stg_policies")} p ON c.policy_id = p.policy_id
+    LEFT JOIN ${ref("stg_coverages")} cov ON p.coverage_type = cov.coverage_type
+)
+SELECT
+    *,
+    (EXTRACT(YEAR FROM DATE '${dataform.projectConfig.vars.valuation_date}') - EXTRACT(YEAR FROM accident_date)) * 12
+        + (EXTRACT(MONTH FROM DATE '${dataform.projectConfig.vars.valuation_date}') - EXTRACT(MONTH FROM accident_date))
+        AS development_months_at_valuation,
+    CASE
+        WHEN initial_reserve > 200000 THEN TRUE
+        ELSE FALSE
+    END AS is_large_loss
+FROM claim_policy

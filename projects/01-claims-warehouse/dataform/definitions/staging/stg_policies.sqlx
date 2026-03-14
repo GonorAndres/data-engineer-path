@@ -1,0 +1,26 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_staging" : "dev_claims_staging",
+  description: "Cleaned policy data with computed term. One row per policy.",
+  tags: ["staging"],
+  assertions: {
+    uniqueKey: ["policy_id"],
+    nonNull: ["policy_id", "policyholder_id", "coverage_type", "effective_date"]
+  }
+}
+
+SELECT
+    CAST(policy_id AS INT64) AS policy_id,
+    CAST(policyholder_id AS INT64) AS policyholder_id,
+    TRIM(policy_number) AS policy_number,
+    LOWER(TRIM(coverage_type)) AS coverage_type,
+    CAST(effective_date AS DATE) AS effective_date,
+    CAST(expiration_date AS DATE) AS expiration_date,
+    CAST(annual_premium AS NUMERIC) AS annual_premium,
+    CAST(deductible AS NUMERIC) AS deductible,
+    CAST(coverage_limit AS NUMERIC) AS coverage_limit,
+    LOWER(TRIM(status)) AS status,
+    DATE_DIFF(CAST(expiration_date AS DATE), CAST(effective_date AS DATE), DAY) AS policy_term_days
+FROM ${ref("raw_policies")}
+WHERE policy_id IS NOT NULL
+  AND CAST(effective_date AS DATE) < CAST(expiration_date AS DATE)

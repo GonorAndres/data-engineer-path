@@ -1,0 +1,12 @@
+{
+  "defaultSchema": "analytics",
+  "assertionSchema": "assertions",
+  "warehouse": "bigquery",
+  "defaultDatabase": "your-gcp-project-id",
+  "defaultLocation": "US",
+  "vars": {
+    "env": "dev",
+    "valuation_date": "2025-12-31",
+    "max_bytes_billed": "10737418240"
+  }
+}

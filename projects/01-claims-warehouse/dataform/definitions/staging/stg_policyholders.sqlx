@@ -1,0 +1,23 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_staging" : "dev_claims_staging",
+  description: "Cleaned policyholder data. One row per policyholder.",
+  tags: ["staging"],
+  assertions: {
+    uniqueKey: ["policyholder_id"],
+    nonNull: ["policyholder_id", "first_name", "last_name", "state_code"]
+  }
+}
+
+SELECT
+    CAST(policyholder_id AS INT64) AS policyholder_id,
+    TRIM(first_name) AS first_name,
+    TRIM(last_name) AS last_name,
+    CAST(date_of_birth AS DATE) AS date_of_birth,
+    UPPER(TRIM(gender)) AS gender,
+    UPPER(TRIM(state_code)) AS state_code,
+    TRIM(city) AS city,
+    LOWER(TRIM(occupation)) AS occupation,
+    CAST(registration_date AS DATE) AS registration_date
+FROM ${ref("raw_policyholders")}
+WHERE policyholder_id IS NOT NULL

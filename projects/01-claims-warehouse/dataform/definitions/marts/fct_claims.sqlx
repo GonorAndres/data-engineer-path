@@ -1,0 +1,63 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_analytics" : "dev_claims_analytics",
+  description: "Claims fact table. One row per claim with all metrics and dimension keys.",
+  tags: ["marts", "fact"],
+  bigquery: {
+    partitionBy: "accident_date",
+    clusterBy: ["coverage_type", "claim_status"]
+  },
+  assertions: {
+    uniqueKey: ["claim_id"],
+    nonNull: ["claim_id", "policy_id", "accident_date"]
+  }
+}
+
+WITH claim_payments_summary AS (
+    SELECT
+        claim_id,
+        SUM(CASE WHEN payment_type = 'indemnity' THEN payment_amount ELSE 0 END) AS total_indemnity,
+        SUM(CASE WHEN payment_type = 'expense' THEN payment_amount ELSE 0 END) AS total_expense,
+        SUM(CASE WHEN payment_type = 'recovery' THEN payment_amount ELSE 0 END) AS total_recovery,
+        SUM(payment_amount) AS total_paid,
+        COUNT(*) AS payment_count,
+        MIN(payment_date) AS first_payment_date,
+        MAX(payment_date) AS last_payment_date
+    FROM ${ref("stg_claim_payments")}
+    GROUP BY claim_id
+)
+SELECT
+    c.claim_id,
+    c.policy_id,
+    c.policyholder_id,
+    c.claim_number,
+    CAST(FORMAT_DATE('%Y%m%d', c.accident_date) AS INT64) AS accident_date_key,
+    CAST(FORMAT_DATE('%Y%m%d', c.report_date) AS INT64) AS report_date_key,
+    c.accident_date,
+    c.report_date,
+    c.close_date,
+    c.claim_status,
+    c.cause_of_loss,
+    c.coverage_type,
+    c.coverage_category,
+    c.accident_year,
+    c.accident_quarter,
+    c.report_delay_days,
+    c.development_months_at_valuation,
+    c.is_large_loss,
+    c.annual_premium,
+    c.deductible,
+    c.coverage_limit,
+    c.initial_reserve,
+    c.current_reserve,
+    COALESCE(ps.total_indemnity, 0) AS total_indemnity,
+    COALESCE(ps.total_expense, 0) AS total_expense,
+    COALESCE(ps.total_recovery, 0) AS total_recovery,
+    COALESCE(ps.total_paid, 0) AS total_paid,
+    COALESCE(ps.payment_count, 0) AS payment_count,
+    ps.first_payment_date,
+    ps.last_payment_date,
+    COALESCE(ps.total_paid, 0) + c.current_reserve AS incurred_amount,
+    COALESCE(ps.total_paid, 0) AS net_paid
+FROM ${ref("int_claims_enriched")} c
+LEFT JOIN claim_payments_summary ps ON c.claim_id = ps.claim_id

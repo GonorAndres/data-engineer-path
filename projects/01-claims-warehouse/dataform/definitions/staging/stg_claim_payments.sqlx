@@ -1,0 +1,24 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_staging" : "dev_claims_staging",
+  description: "Cleaned claim payment transactions. One row per payment.",
+  tags: ["staging"],
+  bigquery: {
+    partitionBy: "payment_date",
+    clusterBy: ["claim_id", "payment_type"]
+  },
+  assertions: {
+    uniqueKey: ["payment_id"],
+    nonNull: ["payment_id", "claim_id", "payment_date", "payment_amount"]
+  }
+}
+
+SELECT
+    CAST(payment_id AS INT64) AS payment_id,
+    CAST(claim_id AS INT64) AS claim_id,
+    CAST(payment_date AS DATE) AS payment_date,
+    CAST(payment_amount AS NUMERIC) AS payment_amount,
+    LOWER(TRIM(payment_type)) AS payment_type,
+    CAST(cumulative_paid AS NUMERIC) AS cumulative_paid
+FROM ${ref("raw_claim_payments")}
+WHERE payment_id IS NOT NULL

@@ -1,0 +1,40 @@
+config {
+  type: "assertion",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_assertions" : "dev_claims_assertions",
+  description: "Claims must have report_date >= accident_date and valid statuses.",
+  tags: ["assertion", "claims"],
+  dependencies: ["fct_claims"]
+}
+
+-- Returns rows that violate data quality rules (assertion fails if any rows returned).
+SELECT
+    claim_id,
+    accident_date,
+    report_date,
+    claim_status,
+    'report_before_accident' AS violation
+FROM ${ref("fct_claims")}
+WHERE report_date < accident_date
+
+UNION ALL
+
+SELECT
+    claim_id,
+    accident_date,
+    report_date,
+    claim_status,
+    'closed_with_reserve' AS violation
+FROM ${ref("fct_claims")}
+WHERE claim_status IN ('closed', 'denied')
+  AND current_reserve != 0
+
+UNION ALL
+
+SELECT
+    claim_id,
+    accident_date,
+    report_date,
+    claim_status,
+    'negative_incurred' AS violation
+FROM ${ref("fct_claims")}
+WHERE incurred_amount < -10000

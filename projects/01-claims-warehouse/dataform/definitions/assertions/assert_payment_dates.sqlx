@@ -1,0 +1,16 @@
+config {
+  type: "assertion",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_assertions" : "dev_claims_assertions",
+  description: "Payment dates must not precede the accident date.",
+  tags: ["assertion", "payments"],
+  dependencies: ["fct_claim_payments"]
+}
+
+SELECT
+    payment_id,
+    claim_id,
+    payment_date,
+    accident_date,
+    'payment_before_accident' AS violation
+FROM ${ref("fct_claim_payments")}
+WHERE payment_date < accident_date

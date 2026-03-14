@@ -1,0 +1,31 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_staging" : "dev_claims_staging",
+  description: "Cleaned claims data with report delay and accident period. One row per claim.",
+  tags: ["staging"],
+  bigquery: {
+    partitionBy: "accident_date",
+    clusterBy: ["claim_status", "cause_of_loss"]
+  },
+  assertions: {
+    uniqueKey: ["claim_id"],
+    nonNull: ["claim_id", "policy_id", "accident_date", "report_date"]
+  }
+}
+
+SELECT
+    CAST(claim_id AS INT64) AS claim_id,
+    CAST(policy_id AS INT64) AS policy_id,
+    TRIM(claim_number) AS claim_number,
+    CAST(accident_date AS DATE) AS accident_date,
+    CAST(report_date AS DATE) AS report_date,
+    SAFE_CAST(close_date AS DATE) AS close_date,
+    LOWER(TRIM(claim_status)) AS claim_status,
+    LOWER(TRIM(cause_of_loss)) AS cause_of_loss,
+    CAST(initial_reserve AS NUMERIC) AS initial_reserve,
+    CAST(current_reserve AS NUMERIC) AS current_reserve,
+    DATE_DIFF(CAST(report_date AS DATE), CAST(accident_date AS DATE), DAY) AS report_delay_days,
+    EXTRACT(YEAR FROM CAST(accident_date AS DATE)) AS accident_year,
+    EXTRACT(QUARTER FROM CAST(accident_date AS DATE)) AS accident_quarter
+FROM ${ref("raw_claims")}
+WHERE claim_id IS NOT NULL

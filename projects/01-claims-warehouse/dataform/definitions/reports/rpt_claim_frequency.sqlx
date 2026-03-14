@@ -1,0 +1,58 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_reports" : "dev_claims_reports",
+  description: "Claim frequency, severity, pure premium, and loss ratio by year and coverage type.",
+  tags: ["reports", "actuarial"]
+}
+
+WITH claims_by_year_coverage AS (
+    SELECT
+        accident_year,
+        coverage_type,
+        COUNT(*) AS claim_count,
+        SUM(total_paid) AS total_paid,
+        AVG(total_paid) AS avg_severity,
+        SUM(incurred_amount) AS total_incurred
+    FROM ${ref("fct_claims")}
+    GROUP BY accident_year, coverage_type
+),
+exposure_by_year_coverage AS (
+    SELECT
+        exposure_year,
+        coverage_type,
+        SUM(exposure_years) AS total_exposure_years,
+        SUM(earned_premium) AS total_earned_premium,
+        COUNT(*) AS policy_count
+    FROM ${ref("int_policy_exposure")}
+    GROUP BY exposure_year, coverage_type
+)
+SELECT
+    COALESCE(c.accident_year, e.exposure_year) AS year,
+    COALESCE(c.coverage_type, e.coverage_type) AS coverage_type,
+    COALESCE(e.policy_count, 0) AS policy_count,
+    COALESCE(e.total_exposure_years, 0) AS exposure_years,
+    COALESCE(e.total_earned_premium, 0) AS earned_premium,
+    COALESCE(c.claim_count, 0) AS claim_count,
+    COALESCE(c.total_paid, 0) AS total_paid,
+    COALESCE(c.avg_severity, 0) AS avg_severity,
+    COALESCE(c.total_incurred, 0) AS total_incurred,
+    CASE
+        WHEN COALESCE(e.total_exposure_years, 0) > 0
+        THEN ROUND(CAST(COALESCE(c.claim_count, 0) AS FLOAT64) / e.total_exposure_years, 4)
+        ELSE NULL
+    END AS claim_frequency,
+    CASE
+        WHEN COALESCE(e.total_exposure_years, 0) > 0
+        THEN ROUND(COALESCE(c.total_incurred, 0) / e.total_exposure_years, 2)
+        ELSE NULL
+    END AS pure_premium,
+    CASE
+        WHEN COALESCE(e.total_earned_premium, 0) > 0
+        THEN ROUND(COALESCE(c.total_incurred, 0) / e.total_earned_premium, 4)
+        ELSE NULL
+    END AS loss_ratio
+FROM claims_by_year_coverage c
+FULL OUTER JOIN exposure_by_year_coverage e
+    ON c.accident_year = e.exposure_year
+   AND c.coverage_type = e.coverage_type
+ORDER BY year, coverage_type

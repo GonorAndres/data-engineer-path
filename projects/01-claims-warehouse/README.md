@@ -27,20 +27,33 @@ A complete analytics warehouse for insurance claims data -- from synthetic data 
 | Data generation | Faker (es_MX) + NumPy | Realistic actuarial distributions, Mexican context |
 | Transforms | Raw SQL (DuckDB-compatible) | Portable to Dataform SQLX with minimal changes |
 | Testing | pytest | Schema validation + data quality + SQL correctness |
-| Target warehouse | BigQuery (Week 3-4) | GCP-native, serverless, Dataform integration |
+| Cloud warehouse | BigQuery | GCP-native, serverless, partitioning/clustering |
+| Cloud transforms | Dataform (SQLX) | Native BigQuery integration, free, DAG-based |
+| Raw storage | GCS | Data lake for raw CSV ingestion |
+| Visualization | Looker Studio | Free BI tool, connects directly to BigQuery |
 
 ## Architecture
 
-```
-┌──────────────────┐     ┌──────────────────────────────────────────────────┐
-│  Data Generator   │     │                   DuckDB                        │
-│  (Faker + NumPy)  │────>│                                                │
-│  5 CSV files      │     │  raw_*  ──> stg_*  ──> int_*  ──> fct_*/dim_* │
-└──────────────────┘     │  (load)     (clean)    (join)     (model)      │
-                         │                                     │          │
-                         │                              rpt_loss_triangle │
-                         │                              rpt_claim_freq    │
-                         └──────────────────────────────────────────────────┘
+```mermaid
+graph LR
+    subgraph "Local Development ($0)"
+        GEN[Data Generator<br/>Faker + NumPy] --> CSV[CSV Files]
+        CSV --> DUCK[DuckDB<br/>In-Memory]
+        DUCK --> |sql/| STG[stg_*]
+        STG --> INT[int_*]
+        INT --> MART[fct_* / dim_*]
+        MART --> RPT[rpt_*]
+    end
+
+    subgraph "GCP Deployment (~$5-15)"
+        CSV --> |gsutil cp| GCS[GCS Bucket<br/>raw/]
+        GCS --> |bq load| RAW[BigQuery<br/>claims_raw]
+        RAW --> |Dataform| BQ_STG[claims_staging]
+        BQ_STG --> BQ_INT[claims_intermediate]
+        BQ_INT --> BQ_MART[claims_analytics]
+        BQ_MART --> BQ_RPT[claims_reports]
+        BQ_RPT --> DASH[Looker Studio<br/>Dashboard]
+    end
 ```
 
 ## Data Model
@@ -98,47 +111,69 @@ cd .. && python3 -m pytest tests/ -v
 The staircase pattern shows how older accident years are more fully developed.
 Empty cells in the lower-right represent future development (IBNR).
 
+## Deploy to GCP (BigQuery + Dataform)
+
+```bash
+# 1. Set up GCP project with safety guardrails
+bash scripts/setup_gcp.sh YOUR_PROJECT_ID
+
+# 2. In BigQuery Console:
+#    - Create a Dataform repository
+#    - Connect it to this repo's dataform/ directory
+#    - Update dataform.json with your project ID
+#    - Run the workflow
+
+# 3. Verify deployment
+pip install google-cloud-bigquery
+python scripts/query_bigquery.py --project YOUR_PROJECT_ID
+```
+
+**Cost guardrails** (set up by `setup_gcp.sh`):
+- `maximum_bytes_billed`: 10 GB/query
+- GCS lifecycle: auto-delete test data after 30 days
+- Billing alerts at $50, $100, $150, $200, $250
+
+**BigQuery datasets** (dev environment):
+- `dev_claims_raw` -- Raw CSVs loaded from GCS
+- `dev_claims_staging` -- Cleaned, typed data
+- `dev_claims_intermediate` -- Enriched, joined data
+- `dev_claims_analytics` -- Facts and dimensions (star schema)
+- `dev_claims_reports` -- Loss triangle, claim frequency
+
 ## Project Structure
 
 ```
 01-claims-warehouse/
 ├── README.md
 ├── pyproject.toml
-├── src/
-│   ├── data_generator.py    # Synthetic data with actuarial distributions
-│   └── main.py              # DuckDB pipeline orchestrator
-├── sql/
-│   ├── staging/             # 1:1 with source, type cleaning
-│   │   ├── stg_policyholders.sql
-│   │   ├── stg_policies.sql
-│   │   ├── stg_claims.sql
-│   │   ├── stg_claim_payments.sql
-│   │   └── stg_coverages.sql
-│   ├── intermediate/        # Business logic, joins, computed fields
-│   │   ├── int_claims_enriched.sql
-│   │   ├── int_claim_payments_cumulative.sql
-│   │   └── int_policy_exposure.sql
-│   ├── marts/               # Final dimensional model
-│   │   ├── dim_date.sql
-│   │   ├── dim_policyholder.sql
-│   │   ├── dim_policy.sql
-│   │   ├── dim_coverage.sql
-│   │   ├── fct_claims.sql
-│   │   └── fct_claim_payments.sql
-│   └── reports/             # Analytical views
-│       ├── rpt_loss_triangle.sql
-│       └── rpt_claim_frequency.sql
+├── src/                           # Local pipeline (DuckDB)
+│   ├── data_generator.py          #   Synthetic data with actuarial distributions
+│   └── main.py                    #   DuckDB pipeline orchestrator
+├── sql/                           # DuckDB-compatible SQL transforms
+│   ├── staging/                   #   5 files: clean, type-cast
+│   ├── intermediate/              #   3 files: enrich, join, compute
+│   ├── marts/                     #   6 files: dim_* + fct_*
+│   └── reports/                   #   2 files: loss triangle + frequency
+├── dataform/                      # BigQuery deployment (Dataform SQLX)
+│   ├── dataform.json              #   Project config (env vars, defaults)
+│   ├── package.json               #   Dataform dependencies
+│   ├── includes/helpers.js        #   Reusable macros (surrogateKey, dateKey)
+│   └── definitions/
+│       ├── sources/               #   5 source declarations (raw_*)
+│       ├── staging/               #   5 SQLX: stg_* with assertions
+│       ├── intermediate/          #   3 SQLX: int_* with partitioning
+│       ├── marts/                 #   6 SQLX: dim_*/fct_* with clustering
+│       ├── reports/               #   2 SQLX: loss triangle + frequency
+│       └── assertions/            #   3 data quality assertions
+├── scripts/                       # Deployment scripts
+│   ├── setup_gcp.sh               #   GCP setup (APIs, GCS, BQ datasets, load)
+│   └── query_bigquery.py          #   Query deployed warehouse
 ├── data/
-│   └── sample_data/         # Generated CSVs (~288 KB total)
-│       ├── policyholders.csv
-│       ├── policies.csv
-│       ├── claims.csv
-│       ├── claim_payments.csv
-│       └── coverages.csv
-└── tests/
-    ├── conftest.py                # Shared fixtures (DuckDB pipeline)
-    ├── test_data_generator.py     # 27 tests: schema, distributions, relationships
-    └── test_sql_transforms.py     # 25 tests: transforms, quality, loss triangle
+│   └── sample_data/               #   Generated CSVs (~288 KB)
+└── tests/                         #   52 pytest tests
+    ├── conftest.py
+    ├── test_data_generator.py
+    └── test_sql_transforms.py
 ```
 
 ## Synthetic Data Details
@@ -161,3 +196,4 @@ All data uses Mexican context: es_MX names, Mexican state codes, MXN currency.
 - [[loss-triangle-construction]] -- How loss triangles work and why they matter
 - [[data-quality]] -- Data quality testing approach
 - [[bigquery-guide]] -- Target deployment platform
+- [[dataform-guide]] -- SQLX transformation framework used for BigQuery deployment

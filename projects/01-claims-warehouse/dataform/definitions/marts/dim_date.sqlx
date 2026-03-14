@@ -1,0 +1,41 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_analytics" : "dev_claims_analytics",
+  description: "Date dimension covering 2019-2026. Standard calendar with fiscal year.",
+  tags: ["marts", "dimension"]
+}
+
+WITH date_spine AS (
+    SELECT full_date
+    FROM UNNEST(
+        GENERATE_DATE_ARRAY(DATE '2019-01-01', DATE '2026-12-31', INTERVAL 1 DAY)
+    ) AS full_date
+)
+SELECT
+    CAST(FORMAT_DATE('%Y%m%d', full_date) AS INT64) AS date_key,
+    full_date,
+    EXTRACT(YEAR FROM full_date) AS year,
+    EXTRACT(QUARTER FROM full_date) AS quarter,
+    EXTRACT(MONTH FROM full_date) AS month,
+    EXTRACT(DAY FROM full_date) AS day,
+    EXTRACT(DAYOFWEEK FROM full_date) AS day_of_week,
+    FORMAT_DATE('%A', full_date) AS day_name,
+    FORMAT_DATE('%B', full_date) AS month_name,
+    EXTRACT(ISOWEEK FROM full_date) AS iso_week,
+    CASE WHEN EXTRACT(DAYOFWEEK FROM full_date) IN (1, 7) THEN TRUE ELSE FALSE END AS is_weekend,
+    CASE WHEN full_date = LAST_DAY(full_date) THEN TRUE ELSE FALSE END AS is_month_end,
+    CASE
+        WHEN EXTRACT(MONTH FROM full_date) IN (3, 6, 9, 12)
+         AND full_date = LAST_DAY(full_date)
+        THEN TRUE ELSE FALSE
+    END AS is_quarter_end,
+    CASE
+        WHEN EXTRACT(MONTH FROM full_date) = 12
+         AND EXTRACT(DAY FROM full_date) = 31
+        THEN TRUE ELSE FALSE
+    END AS is_year_end,
+    EXTRACT(YEAR FROM full_date) AS fiscal_year,
+    EXTRACT(QUARTER FROM full_date) AS fiscal_quarter,
+    CONCAT(CAST(EXTRACT(YEAR FROM full_date) AS STRING), '-Q', CAST(EXTRACT(QUARTER FROM full_date) AS STRING)) AS year_quarter_label
+FROM date_spine
+ORDER BY full_date

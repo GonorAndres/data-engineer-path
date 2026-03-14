@@ -1,0 +1,47 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_intermediate" : "dev_claims_intermediate",
+  description: "Policy exposure calculations for frequency analysis. Clips to observation window.",
+  tags: ["intermediate"]
+}
+
+WITH exposure_calc AS (
+    SELECT
+        policy_id,
+        policyholder_id,
+        policy_number,
+        coverage_type,
+        effective_date,
+        expiration_date,
+        annual_premium,
+        status,
+        GREATEST(effective_date, DATE '2020-01-01') AS exposure_start,
+        LEAST(expiration_date, DATE '${dataform.projectConfig.vars.valuation_date}') AS exposure_end
+    FROM ${ref("stg_policies")}
+    WHERE status != 'cancelled'
+)
+SELECT
+    *,
+    CASE
+        WHEN exposure_end > exposure_start
+        THEN DATE_DIFF(exposure_end, exposure_start, DAY)
+        ELSE 0
+    END AS exposure_days,
+    CASE
+        WHEN exposure_end > exposure_start
+        THEN CAST(DATE_DIFF(exposure_end, exposure_start, DAY) AS FLOAT64) / 365.25
+        ELSE 0.0
+    END AS exposure_years,
+    CASE
+        WHEN exposure_end > exposure_start
+        THEN ROUND(
+            annual_premium
+            * CAST(DATE_DIFF(exposure_end, exposure_start, DAY) AS FLOAT64)
+            / CAST(DATE_DIFF(expiration_date, effective_date, DAY) AS FLOAT64),
+            2
+        )
+        ELSE 0.0
+    END AS earned_premium,
+    EXTRACT(YEAR FROM GREATEST(effective_date, DATE '2020-01-01')) AS exposure_year
+FROM exposure_calc
+WHERE exposure_end > exposure_start

@@ -1,0 +1,7 @@
+config {
+  type: "declaration",
+  database: dataform.projectConfig.defaultDatabase,
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_raw" : "dev_claims_raw",
+  name: "raw_claim_payments",
+  description: "Raw claim payment transactions loaded from GCS CSV."
+}

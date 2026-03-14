@@ -1,0 +1,33 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_analytics" : "dev_claims_analytics",
+  description: "Policy dimension with coverage details. One row per policy.",
+  tags: ["marts", "dimension"],
+  assertions: {
+    uniqueKey: ["policy_id"]
+  }
+}
+
+SELECT
+    p.policy_id,
+    p.policyholder_id,
+    p.policy_number,
+    p.coverage_type,
+    c.coverage_category,
+    c.description AS coverage_description,
+    p.effective_date,
+    p.expiration_date,
+    p.policy_term_days,
+    p.annual_premium,
+    p.deductible,
+    p.coverage_limit,
+    p.status,
+    EXTRACT(YEAR FROM p.effective_date) AS policy_year,
+    CASE
+        WHEN p.status = 'active'
+         AND p.effective_date <= DATE '${dataform.projectConfig.vars.valuation_date}'
+         AND p.expiration_date > DATE '${dataform.projectConfig.vars.valuation_date}'
+        THEN TRUE ELSE FALSE
+    END AS is_currently_active
+FROM ${ref("stg_policies")} p
+LEFT JOIN ${ref("stg_coverages")} c ON p.coverage_type = c.coverage_type

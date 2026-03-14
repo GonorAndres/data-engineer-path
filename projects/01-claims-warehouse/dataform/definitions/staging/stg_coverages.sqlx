@@ -1,0 +1,12 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_staging" : "dev_claims_staging",
+  description: "Coverage type reference data.",
+  tags: ["staging", "reference"]
+}
+
+SELECT
+    LOWER(TRIM(coverage_type)) AS coverage_type,
+    LOWER(TRIM(coverage_category)) AS coverage_category,
+    TRIM(description) AS description
+FROM ${ref("raw_coverages")}

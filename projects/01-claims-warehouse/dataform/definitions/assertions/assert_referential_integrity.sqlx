@@ -1,0 +1,27 @@
+config {
+  type: "assertion",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_assertions" : "dev_claims_assertions",
+  description: "All claims must reference a valid policy, all payments a valid claim.",
+  tags: ["assertion", "integrity"],
+  dependencies: ["fct_claims", "fct_claim_payments"]
+}
+
+-- Orphan claims (no matching policy)
+SELECT
+    c.claim_id,
+    c.policy_id,
+    'orphan_claim' AS violation
+FROM ${ref("fct_claims")} c
+LEFT JOIN ${ref("dim_policy")} p ON c.policy_id = p.policy_id
+WHERE p.policy_id IS NULL
+
+UNION ALL
+
+-- Orphan payments (no matching claim)
+SELECT
+    CAST(fp.payment_id AS INT64) AS claim_id,
+    fp.claim_id AS policy_id,
+    'orphan_payment' AS violation
+FROM ${ref("fct_claim_payments")} fp
+LEFT JOIN ${ref("fct_claims")} c ON fp.claim_id = c.claim_id
+WHERE c.claim_id IS NULL

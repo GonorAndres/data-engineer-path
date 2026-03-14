@@ -1,0 +1,31 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.env === "prod" ? "claims_analytics" : "dev_claims_analytics",
+  description: "Claim payments fact table with development context for loss triangles.",
+  tags: ["marts", "fact"],
+  bigquery: {
+    partitionBy: "payment_date",
+    clusterBy: ["claim_id", "coverage_type"]
+  },
+  assertions: {
+    uniqueKey: ["payment_id"]
+  }
+}
+
+SELECT
+    p.payment_id,
+    p.claim_id,
+    CAST(FORMAT_DATE('%Y%m%d', p.payment_date) AS INT64) AS payment_date_key,
+    CAST(FORMAT_DATE('%Y%m%d', p.accident_date) AS INT64) AS accident_date_key,
+    p.payment_date,
+    p.accident_date,
+    p.development_year,
+    p.development_months,
+    p.accident_year,
+    p.payment_amount,
+    p.payment_type,
+    p.cumulative_paid,
+    p.payment_rank,
+    p.coverage_type,
+    p.claim_status
+FROM ${ref("int_claim_payments_cumulative")} p
