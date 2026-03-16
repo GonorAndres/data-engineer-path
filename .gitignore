@@ -49,3 +49,6 @@ service-account*.json
 
 # Subagent working files
 subagents_outputs/
+
+# Personal reference docs (not part of the portfolio)
+PROJECT_WALKTHROUGH.md
