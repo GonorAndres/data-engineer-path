@@ -36,4 +36,15 @@ def query_bq(sql: str) -> pd.DataFrame:
     interactions do not trigger new BigQuery jobs.
     """
     client = get_bq_client()
-    return client.query(sql).to_dataframe()
+    df = client.query(sql).to_dataframe()
+    # BigQuery NUMERIC/DECIMAL columns arrive as Python decimal.Decimal,
+    # which breaks pandas arithmetic and Plotly rendering. Convert to float.
+    import decimal
+    for col in df.columns:
+        if df[col].dtype == object and len(df) > 0:
+            sample = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
+            if isinstance(sample, decimal.Decimal):
+                df[col] = df[col].apply(
+                    lambda x: float(x) if isinstance(x, decimal.Decimal) else x
+                )
+    return df
