@@ -28,8 +28,7 @@ resource "google_cloud_run_v2_service" "pipeline" {
   project  = var.project_id
   location = var.region
 
-  # Allow Terraform to update the service (don't block on traffic migration)
-  deletion_protection = false
+  # deletion_protection requires google provider >= 6.x; omit for 5.x compatibility
 
   template {
     # Service account for pipeline execution
@@ -98,7 +97,7 @@ resource "google_cloud_run_v2_service" "subscriber" {
   project  = var.project_id
   location = var.region
 
-  deletion_protection = false
+  # deletion_protection requires google provider >= 6.x
 
   template {
     service_account = var.pipeline_service_account_email

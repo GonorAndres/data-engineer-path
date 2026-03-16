@@ -140,6 +140,41 @@ python scripts/query_bigquery.py --project YOUR_PROJECT_ID
 - `dev_claims_analytics` -- Facts and dimensions (star schema)
 - `dev_claims_reports` -- Loss triangle, claim frequency
 
+## Deployment
+
+**Status**: Deployed to GCP (dev environment)
+**Dashboard**: [https://claims-dashboard-451451662791.us-central1.run.app](https://claims-dashboard-451451662791.us-central1.run.app) (public -- 4 pages: Loss Triangle, Portfolio Health, Pricing Adequacy, Geographic Risk)
+**BigQuery Project**: `project-ad7a5be2-a1c7-4510-82d`
+**Datasets**: `dev_claims_raw`, `dev_claims_staging`, `dev_claims_intermediate`, `dev_claims_analytics`, `dev_claims_reports`
+**GCS Bucket**: `dev-claims-data-project-ad7a5be2-a1c7-4510-82d`
+**Dataform Repository**: `claims-warehouse-dataform` (deployed via Python SDK)
+**Cost**: <$1/month (synthetic data, within free tiers)
+
+### Deployment Command
+
+```bash
+# Upload data and run Dataform transforms
+python scripts/deploy_dataform.py --project PROJECT_ID --env dev --region us-central1
+```
+
+### What Broke During Deployment
+
+- **Dataform service agent permissions**: The Google-managed Dataform SA needed `bigquery.jobUser` and `bigquery.dataEditor` roles -- not documented in Dataform quickstart
+- **Location mismatch**: Terraform creates datasets in `us-central1` (regional) but Dataform's `defaultLocation` was `US` (multi-region). Fixed by passing `--region us-central1` to deploy script
+- **CSV autodetect on tiny files**: `bq load --autodetect` failed on `coverages.csv` (6 rows) -- treated the header as data. Fixed with explicit schema
+
+## Decisions & Trade-offs
+
+| Decision | Chosen | Alternatives Considered | Why |
+|----------|--------|------------------------|-----|
+| Local warehouse engine | DuckDB | SQLite, Postgres, pandas | Zero config, SQL-compatible with BigQuery, in-process (no server), reads/writes Parquet natively |
+| Cloud warehouse | BigQuery + Dataform | Snowflake + dbt, Redshift | GCP-native, serverless pricing matches low-volume claims data, Dataform is free |
+| Data generation | Faker (es_MX) + NumPy distributions | Static CSV fixtures, Mockaroo | Actuarial distributions (Poisson frequency, LogNormal severity) create realistic loss patterns; es_MX for Mexican context |
+| Transform layering | raw > stg > int > marts > reports | Single-pass transforms, views-only | Enables debugging at each layer, staging isolates type casting, marts are reusable across reports |
+| Schema design | Star schema (4 dims + 2 facts) | OBT (One Big Table), Data Vault | Star schema balances query performance with modeling clarity; actuarial reports need dimensional slicing |
+| Export format | CSV via DuckDB COPY | Parquet, JSON | Simplest format for BigQuery load; Parquet would be better at scale but CSV is debuggable |
+| IBNR handling | Drop unreported claims | Estimate IBNR with chain-ladder | Dropping is honest about data completeness; estimation belongs in actuarial analysis, not the warehouse |
+
 ## Project Structure
 
 ```
@@ -187,6 +222,14 @@ The data generator uses actuarial distributions to create realistic insurance da
 | Dev pattern length | 5 yr | 6 yr | 4 yr | 7 yr | 2 yr |
 
 All data uses Mexican context: es_MX names, Mexican state codes, MXN currency.
+
+## What I Would Change
+
+- **Parquet over CSV for exports** -- CSV was fine for small samples but Parquet would preserve types, compress better, and load faster into BigQuery
+- **Add data quality checks (Great Expectations or custom)** -- currently no validation between layers; a staging-to-intermediate quality gate would catch schema drift
+- **Parameterize valuation date** -- hardcoded valuation date limits reusability; should be a CLI argument
+- **Add incremental load pattern** -- current pipeline truncates and reloads; a merge/upsert pattern would be more production-realistic
+- **Use polars instead of DuckDB SQL for transforms** -- DuckDB SQL was the right choice for BigQuery portability, but polars would make the Python pipeline more testable
 
 ## Related Docs
 

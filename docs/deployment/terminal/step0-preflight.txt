@@ -1,0 +1,29 @@
+== Step 0: Pre-flight Checks ==
+Date: 2026-03-15
+Project: project-ad7a5be2-a1c7-4510-82d
+Region: us-central1
+
+== gcloud auth list ==
+                  Credentialed Accounts
+ACTIVE  ACCOUNT
+        451451662791-compute@developer.gserviceaccount.com
+*       andtega349@gmail.com
+
+== ADC ==
+Application Default Credentials: OK (token verified)
+
+== APIs Enabled ==
+bigquery.googleapis.com
+storage.googleapis.com
+dataform.googleapis.com
+run.googleapis.com
+artifactregistry.googleapis.com
+cloudscheduler.googleapis.com
+cloudbuild.googleapis.com
+eventarc.googleapis.com
+iam.googleapis.com
+logging.googleapis.com
+monitoring.googleapis.com
+pubsub.googleapis.com
+
+Status: All 12 APIs enabled successfully.

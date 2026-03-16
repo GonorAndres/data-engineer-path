@@ -71,6 +71,9 @@ jobs:
           cache-dependency-path: |
             projects/01-claims-warehouse/pyproject.toml
             projects/02-orchestrated-elt/pyproject.toml
+            projects/03-streaming-claims-intake/pyproject.toml
+            projects/05-streaming-claims-pipeline/pyproject.toml
+            projects/06-pricing-ml-pipeline/pyproject.toml
 
       - name: Install ruff
         run: pip install ruff>=0.4.0
@@ -84,9 +87,23 @@ jobs:
         # that are not installed in the test environment.  The DAG file is
         # validated separately by parsing it as a Python module.
 
+      - name: Lint Project 03 (Streaming Claims Intake)
+        run: ruff check projects/03-streaming-claims-intake/src/
+
+      - name: Lint Project 05 (Streaming Claims Pipeline)
+        run: ruff check projects/05-streaming-claims-pipeline/src/
+
+      - name: Lint Project 06 (Pricing ML Pipeline)
+        run: ruff check projects/06-pricing-ml-pipeline/src/
+
       - name: Check formatting
-        run: ruff format --check projects/01-claims-warehouse/src/ projects/02-orchestrated-elt/src/
-        continue-on-error: true  # Warn but don't fail on formatting
+        run: ruff format --check projects/01-claims-warehouse/src/ projects/02-orchestrated-elt/src/ projects/03-streaming-claims-intake/src/ projects/05-streaming-claims-pipeline/src/ projects/06-pricing-ml-pipeline/src/
+
+      - name: Validate Terraform (Project 04)
+        run: |
+          cd projects/04-data-platform-terraform
+          terraform fmt -check -recursive
+        continue-on-error: true  # Warn if not formatted
 
   # ===========================================================================
   # Job 2: Test
@@ -111,6 +128,9 @@ jobs:
           cache-dependency-path: |
             projects/01-claims-warehouse/pyproject.toml
             projects/02-orchestrated-elt/pyproject.toml
+            projects/03-streaming-claims-intake/pyproject.toml
+            projects/05-streaming-claims-pipeline/pyproject.toml
+            projects/06-pricing-ml-pipeline/pyproject.toml
 
       # -- Project 01: Claims Warehouse --------------------------------------
       - name: Install Project 01 dependencies
@@ -133,7 +153,39 @@ jobs:
         run: |
           cd projects/02-orchestrated-elt
           python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project02.xml
-        continue-on-error: true  # Project 02 tests may be minimal initially
+
+      # -- Project 03: Streaming Claims Intake --------------------------------
+      - name: Install Project 03 dependencies
+        run: |
+          cd projects/03-streaming-claims-intake
+          pip install -e ".[dev]"
+
+      - name: Run Project 03 tests
+        run: |
+          cd projects/03-streaming-claims-intake
+          python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project03.xml
+
+      # -- Project 05: Streaming Claims Pipeline --------------------------------
+      - name: Install Project 05 dependencies
+        run: |
+          cd projects/05-streaming-claims-pipeline
+          pip install -e ".[dev]"
+
+      - name: Run Project 05 tests
+        run: |
+          cd projects/05-streaming-claims-pipeline
+          python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project05.xml
+
+      # -- Project 06: Pricing ML Pipeline --------------------------------------
+      - name: Install Project 06 dependencies
+        run: |
+          cd projects/06-pricing-ml-pipeline
+          pip install -e ".[dev]"
+
+      - name: Run Project 06 tests
+        run: |
+          cd projects/06-pricing-ml-pipeline
+          python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project06.xml
 
       # -- Validate Airflow DAG syntax ----------------------------------------
       - name: Validate Airflow DAG (syntax check)

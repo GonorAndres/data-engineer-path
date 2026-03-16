@@ -67,23 +67,40 @@ RAW_TABLES = {
 }
 
 
-def generate_data(seed: int = 42) -> dict[str, int]:
-    """Generate synthetic sample data CSVs."""
+def generate_data(
+    seed: int = 42,
+    n_policyholders: int = 500,
+    output_format: str = "csv",
+) -> dict[str, int]:
+    """Generate synthetic sample data files (CSV or Parquet)."""
     print(f"\n--- Generating sample data (seed={seed}) ---")
     generator = ClaimsDataGenerator(seed=seed)
-    return generator.generate_all(str(DATA_DIR))
+    return generator.generate_all(
+        str(DATA_DIR),
+        n_policyholders=n_policyholders,
+        output_format=output_format,
+    )
 
 
-def load_raw_tables(con: duckdb.DuckDBPyConnection) -> None:
-    """Load CSV files into raw_* tables in DuckDB."""
-    print("\n--- Loading raw CSVs into DuckDB ---")
+def load_raw_tables(
+    con: duckdb.DuckDBPyConnection,
+    output_format: str = "csv",
+) -> None:
+    """Load data files into raw_* tables in DuckDB.
+
+    Supports both CSV and Parquet inputs.
+    """
+    ext = "parquet" if output_format == "parquet" else "csv"
+    reader = "read_parquet" if output_format == "parquet" else "read_csv_auto"
+    print(f"\n--- Loading raw {ext.upper()} files into DuckDB ---")
     for csv_file, table_name in RAW_TABLES.items():
-        filepath = DATA_DIR / csv_file
+        base_name = csv_file.replace(".csv", "")
+        filepath = DATA_DIR / f"{base_name}.{ext}"
         if not filepath.exists():
             raise FileNotFoundError(f"Missing data file: {filepath}")
         con.execute(
             f"CREATE OR REPLACE TABLE {table_name} AS "
-            f"SELECT * FROM read_csv_auto('{filepath}')"
+            f"SELECT * FROM {reader}('{filepath}')"
         )
         count = con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"  {table_name:<25s} {count:>6,d} rows")
@@ -190,6 +207,8 @@ def run_pipeline(
     export_dir: str | None = None,
     seed: int = 42,
     db_path: Path | None = None,
+    n_policyholders: int = 500,
+    output_format: str = "csv",
 ) -> duckdb.DuckDBPyConnection:
     """Run the full pipeline and return the DuckDB connection.
 
@@ -199,6 +218,8 @@ def run_pipeline(
         export_dir: If set, export mart tables to this directory.
         seed: Random seed for data generation.
         db_path: Path for the DuckDB database file. None = in-memory.
+        n_policyholders: Number of policyholders to generate.
+        output_format: ``"csv"`` (default) or ``"parquet"``.
 
     Returns:
         Open DuckDB connection with all tables loaded.
@@ -210,10 +231,14 @@ def run_pipeline(
         con = duckdb.connect(":memory:")
 
     if generate:
-        generate_data(seed=seed)
+        generate_data(
+            seed=seed,
+            n_policyholders=n_policyholders,
+            output_format=output_format,
+        )
 
     if transform:
-        load_raw_tables(con)
+        load_raw_tables(con, output_format=output_format)
         execute_sql_transforms(con)
         print_summary(con)
 
@@ -255,6 +280,18 @@ def main() -> None:
         action="store_true",
         help="Save DuckDB database to data/claims_warehouse.duckdb",
     )
+    parser.add_argument(
+        "--policyholders",
+        type=int,
+        default=500,
+        help="Number of policyholders to generate (default: 500)",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=["csv", "parquet"],
+        default="csv",
+        help="Output format for generated data (default: csv)",
+    )
     args = parser.parse_args()
 
     generate = not args.transform_only
@@ -267,6 +304,8 @@ def main() -> None:
         export_dir=args.export,
         seed=args.seed,
         db_path=db,
+        n_policyholders=args.policyholders,
+        output_format=args.output_format,
     )
     con.close()
     print("\nPipeline complete.")

@@ -753,21 +753,36 @@ class ClaimsDataGenerator:
 
     # -- Orchestrator -------------------------------------------------------
 
-    def generate_all(self, output_dir: str) -> dict[str, int]:
-        """Generate every table and write the results to CSV files.
+    def generate_all(
+        self,
+        output_dir: str,
+        *,
+        n_policyholders: int = 500,
+        n_policies: int | None = None,
+        output_format: str = "csv",
+    ) -> dict[str, int]:
+        """Generate every table and write the results to files.
 
         Args:
-            output_dir: Directory where the five CSV files will be created.
+            output_dir: Directory where the five data files will be created.
                 Created automatically if it does not exist.
+            n_policyholders: Number of policyholders to generate (default 500).
+            n_policies: Number of policies.  If *None*, auto-computed as
+                ``int(n_policyholders * 1.6)``.
+            output_format: ``"csv"`` (default) or ``"parquet"``.
 
         Returns:
             Dict mapping file name to the number of rows written.
         """
         os.makedirs(output_dir, exist_ok=True)
 
-        policyholders = self.generate_policyholders()
-        policies = self.generate_policies(policyholders)
-        claims = self.generate_claims(policies)
+        if n_policies is None:
+            n_policies = int(n_policyholders * 1.6)
+        target_claims = max(int(n_policyholders * 1.2), 100)
+
+        policyholders = self.generate_policyholders(n=n_policyholders)
+        policies = self.generate_policies(policyholders, n=n_policies)
+        claims = self.generate_claims(policies, target_claims=target_claims)
         payments = self.generate_claim_payments(claims, policies)
         coverages = self.generate_coverages()
 
@@ -777,18 +792,21 @@ class ClaimsDataGenerator:
             for c in claims
         ]
 
+        ext = "parquet" if output_format == "parquet" else "csv"
+        writer = self._write_parquet if output_format == "parquet" else self._write_csv
+
         tables: dict[str, list[dict[str, Any]]] = {
-            "policyholders.csv": policyholders,
-            "policies.csv": policies,
-            "claims.csv": claims_clean,
-            "claim_payments.csv": payments,
-            "coverages.csv": coverages,
+            f"policyholders.{ext}": policyholders,
+            f"policies.{ext}": policies,
+            f"claims.{ext}": claims_clean,
+            f"claim_payments.{ext}": payments,
+            f"coverages.{ext}": coverages,
         }
 
         row_counts: dict[str, int] = {}
         for filename, rows in tables.items():
             filepath = os.path.join(output_dir, filename)
-            self._write_csv(filepath, rows)
+            writer(filepath, rows)
             row_counts[filename] = len(rows)
 
         return row_counts
@@ -803,6 +821,17 @@ class ClaimsDataGenerator:
             writer = csv.DictWriter(fh, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
+
+    @staticmethod
+    def _write_parquet(filepath: str, rows: list[dict[str, Any]]) -> None:
+        """Write rows to a Parquet file using PyArrow."""
+        import pyarrow as pa
+        import pyarrow.parquet as pq
+
+        if not rows:
+            return
+        table = pa.Table.from_pylist(rows)
+        pq.write_table(table, filepath)
 
 
 # ---------------------------------------------------------------------------
@@ -832,11 +861,27 @@ def main() -> None:
         default=42,
         help="Random seed for reproducibility (default: 42)",
     )
+    parser.add_argument(
+        "--policyholders",
+        type=int,
+        default=500,
+        help="Number of policyholders to generate (default: 500)",
+    )
+    parser.add_argument(
+        "--output-format",
+        choices=["csv", "parquet"],
+        default="csv",
+        help="Output format for generated data (default: csv)",
+    )
     args = parser.parse_args()
 
     generator = ClaimsDataGenerator(seed=args.seed)
     print(f"Generating data with seed={args.seed} ...")
-    row_counts = generator.generate_all(args.output)
+    row_counts = generator.generate_all(
+        args.output,
+        n_policyholders=args.policyholders,
+        output_format=args.output_format,
+    )
 
     print(f"\nFiles written to: {os.path.abspath(args.output)}")
     print("-" * 45)

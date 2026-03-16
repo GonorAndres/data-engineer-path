@@ -79,6 +79,14 @@ gcloud config set project <PROJECT_ID>
 # Obsidian vault -- the docs/ folder IS the vault, open it directly in Obsidian
 ```
 
+## Production & Deployment Standards
+
+- Every project README must include a **Deployment** section with: live URL (or "internal"), GCP console screenshot, cost estimate (monthly), and "What Broke During Deployment" notes
+- Every project README must include a **Decisions & Trade-offs** table: what was chosen, alternatives considered, and why
+- Every project README must include a **What I Would Change** retrospective subsection
+- CI must pass (lint + test) before any deployment. Green CI badge required on root README.
+- Deployment evidence is mandatory: screenshots, terminal output, or logs proving the service ran in GCP -- not just local execution
+
 ## Content Philosophy
 
 This is a **learning-first** repository. Every piece of code and documentation should help the author understand:

@@ -18,6 +18,17 @@ Infrastructure as Code for the complete insurance claims data platform. Defines 
 - **Cost-conscious architecture** -- `prevent_destroy` on production data, scale-to-zero compute, cost comments throughout
 - **Security best practices** -- least-privilege IAM, Workload Identity Federation (no long-lived keys)
 
+## Tech Stack
+
+| Component | Tool | Why |
+|-----------|------|-----|
+| IaC engine | Terraform (HCL) | Industry standard, declarative, large GCP provider ecosystem |
+| Cloud provider | GCP | Target platform for the entire portfolio |
+| CI/CD | GitHub Actions | Free for public repos, native GCP integration via WIF |
+| Auth (CI) | Workload Identity Federation | Keyless auth -- no service account keys to rotate |
+| State backend | GCS bucket | Free-tier eligible, supports locking, GCP-native |
+| Convenience runner | Make | Wraps long terraform commands into short targets |
+
 ## Architecture
 
 ```mermaid
@@ -155,6 +166,31 @@ make destroy
         └── outputs.tf
 ```
 
+## Deployment
+
+**Status**: Applied to GCP (dev environment)
+**Resources Created**: 24 (IAM, BigQuery, GCS, Pub/Sub, Cloud Run, Scheduler)
+**State Backend**: `gs://dev-tf-state-project-ad7a5be2-a1c7-4510-82d/data-platform/state`
+**Cost**: $0 (Terraform is free; resources cost covered by individual projects)
+
+### What Broke During Deployment
+
+- **`deletion_protection` unsupported**: The `google_cloud_run_v2_service` resource in the Cloud Run module used `deletion_protection = false`, but this attribute was added in google provider v6.x. Our pinned version (~> 5.0) installed v5.45 which doesn't have it. Fixed by removing the attribute.
+- **State bucket bootstrap**: The GCS backend bucket must exist before `terraform init`, but it's created by the GCS module. Bootstrapped with local state, applied to create the bucket, then migrated state with `terraform init -migrate-state`.
+
+## Decisions & Trade-offs
+
+| Decision | Chosen | Alternatives Considered | Why |
+|----------|--------|------------------------|-----|
+| IaC tool | Terraform | Pulumi, CDK for Terraform, gcloud scripts | HCL is industry standard for infra; declarative model matches GCP resources well |
+| Module structure | 6 child modules | Monolithic main.tf, Terragrunt | Modules are reusable and testable; 6 maps to 6 GCP service categories |
+| Environment separation | Prefix-based naming (dev_/prod_) | Separate GCP projects, Terraform workspaces | Single project with prefixes is cheapest; workspaces add state complexity |
+| State backend | GCS bucket | Local state, Terraform Cloud | GCS is free-tier eligible, supports locking, GCP-native |
+| Destroy protection | prevent_destroy=false (dev) | Always true, always false | Dev resources are disposable; prod fork should set true |
+| Cloud Run scaling | Min 0, Max 1 | Min 1 (warm), Max N | Scale-to-zero = $0 at rest; single instance sufficient for claims volume |
+| Auth for CI/CD | Workload Identity Federation | Service account keys | Keyless auth is GCP best practice; no secrets to rotate |
+| Provider pinning | ~> 5.0 (minor flexibility) | >= 5.0 (any 5.x), exact pin | Allows patch updates while preventing breaking major changes |
+
 ## Cost Considerations
 
 | Resource | Dev Cost | Prod Cost | Notes |
@@ -185,6 +221,14 @@ The intended GitHub Actions workflow (set up in `.github/`):
 1. **On Pull Request**: `terraform fmt -check`, `terraform validate`, `terraform plan` (output posted as PR comment)
 2. **On Merge to main**: `terraform apply -auto-approve` (with Workload Identity Federation for keyless auth)
 3. **On manual trigger**: `terraform destroy` (with required approval)
+
+## What I Would Change
+
+- **Add terraform-docs auto-generation** -- module documentation is manual; terraform-docs would keep input/output docs in sync with code
+- **Use Terraform workspaces for env separation** -- prefix-based naming works but workspaces would provide cleaner state isolation
+- **Add cost estimation (infracost)** -- no automated cost checks; infracost in CI would catch expensive changes before apply
+- **Add policy-as-code (OPA/Sentinel)** -- no guardrails beyond prevent_destroy; OPA policies would enforce tagging, naming, and security standards
+- **Create a bootstrap module** -- initial project setup (APIs, state bucket, WIF) is manual; a bootstrap module would make the repo self-contained
 
 ## Related Docs
 

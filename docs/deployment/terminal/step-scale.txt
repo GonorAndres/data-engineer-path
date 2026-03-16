@@ -1,0 +1,63 @@
+== Scale Deployment ==
+Date: 2026-03-16
+Project: project-ad7a5be2-a1c7-4510-82d
+
+== P01: 100K Policyholders (Parquet) ==
+
+Generated:
+  policyholders: 100,000 rows (1.6 MB Parquet)
+  policies:      160,000 rows (6.5 MB Parquet)
+  claims:        125,634 rows (3.8 MB Parquet)
+  claim_payments: 543,067 rows (12 MB Parquet)
+  coverages:     5 rows
+
+Loaded into BigQuery dev_claims_raw: 928K+ rows, ~64 MB total.
+Dataform re-run: 32/32 actions SUCCEEDED in ~140 seconds.
+BigQuery total storage after transforms: ~420 MB across 22 tables.
+
+Comparison vs synthetic deployment:
+  Policyholders: 500 -> 100,000 (200x)
+  Claims: 608 -> 125,634 (207x)
+  Payments: 2,654 -> 543,067 (205x)
+  Storage: 0.3 MB -> 420 MB (1,400x)
+  Dataform time: ~60s -> ~140s (2.3x)
+  Format: CSV -> Parquet
+
+== P06: freMTPL2 Real Actuarial Data ==
+
+Dataset: French Motor Third-Party Liability (freMTPL2)
+Source: HuggingFace (CASdatasets mirror)
+Policies: 678,013
+Claims: 26,444 (from 24,944 policies with claims)
+Exposure: 358,499 policy-years
+
+Model Results (Tweedie GLM, p=1.5):
+  AIC: 579,766.85
+  Gini Coefficient: 0.2693
+  Training set: 363,494 policies
+  Test set: 91,707 policies
+  Portfolio pure premium: 167.11 MXN
+
+Top Coefficients:
+  log_premium:          4.72 (strongest predictor)
+  exposure_years:      -1.58 (longer exposure -> lower PP)
+  age_band_26-35:      -0.53 (lower risk)
+  age_band_18-25:       0.33 (higher risk -- young drivers)
+  age_band_65+:         0.22 (higher risk -- elderly)
+  state_risk_group_med: 0.15 (medium risk areas)
+
+A/E Ratio (test set): 1.23 (model slightly over-predicts)
+
+== P03: High-Rate Streaming ==
+
+Rate: 100 events/sec (batch size 100)
+Duration: 30 seconds
+Events published: 2,449
+Events in BigQuery: 2,443 (99.8% delivery)
+Throughput: ~82 events/sec sustained (limited by Python GIL + Faker)
+
+Previous rate: 2-3 events/sec
+Improvement: ~40x throughput increase
+
+No Cloud Run errors at this rate. Pub/Sub + Cloud Run subscriber handled
+the load without scaling beyond 1 instance.

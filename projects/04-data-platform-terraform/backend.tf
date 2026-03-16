@@ -14,7 +14,7 @@
 
 terraform {
   backend "gcs" {
-    bucket = "YOUR_PROJECT_ID-tf-state" # Replace with your actual bucket name
+    bucket = "dev-tf-state-project-ad7a5be2-a1c7-4510-82d"
     prefix = "data-platform/state"
   }
 }

@@ -153,15 +153,16 @@ class TestPublishEvents:
         mock_future.result.return_value = "msg-id-123"
         mock_publisher.publish.return_value = mock_future
 
-        count = publish_events(
+        counts = publish_events(
             project_id="test-project",
             topic_id="claims-events",
             rate=100.0,  # Fast rate for test speed
             duration=1,  # 1 second
         )
 
-        assert count > 0
-        assert mock_publisher.publish.call_count == count
+        assert isinstance(counts, dict)
+        assert counts["total"] > 0
+        assert mock_publisher.publish.call_count == counts["total"]
 
     @patch("claims_simulator.pubsub_v1.PublisherClient")
     def test_published_data_is_valid_json(self, mock_publisher_class):

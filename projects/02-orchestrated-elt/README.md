@@ -214,6 +214,44 @@ Cloud Composer becomes worthwhile when you have:
 - Need for Airflow's rich operator ecosystem (Spark, EMR, etc.)
 - A team that already knows Airflow
 
+## Deployment
+
+**Status**: Deployed to GCP (dev environment)
+**Cloud Run Service**: `dev-claims-elt-pipeline`
+**URL**: https://dev-claims-elt-pipeline-451451662791.us-central1.run.app (IAM-authenticated)
+**Artifact Registry**: `us-central1-docker.pkg.dev/project-ad7a5be2-a1c7-4510-82d/data-pipelines/claims-elt-pipeline:v1`
+**Cloud Scheduler**: `dev-claims-pipeline-daily` (06:00 UTC, paused in dev)
+**Cost**: ~$0.10/month (scale-to-zero, scheduler only)
+
+### Deployment Commands
+
+```bash
+# Build and push Docker image
+docker build -t us-central1-docker.pkg.dev/PROJECT_ID/data-pipelines/claims-elt-pipeline:v1 .
+docker push us-central1-docker.pkg.dev/PROJECT_ID/data-pipelines/claims-elt-pipeline:v1
+
+# Deploy with HTTP entrypoint
+gcloud run deploy dev-claims-elt-pipeline \
+  --image=IMAGE_URI --region=us-central1 \
+  --command="python" --args="cloud_run/entrypoint.py"
+```
+
+### What Broke During Deployment
+
+- **Startup probe failed**: The Dockerfile's CMD runs `python -m pipeline` (batch execution), but Cloud Run expects an HTTP server for health checks. Fixed by overriding CMD with `python cloud_run/entrypoint.py` which starts the HTTP handler
+
+## Decisions & Trade-offs
+
+| Decision | Chosen | Alternatives Considered | Why |
+|----------|--------|------------------------|-----|
+| Local orchestrator | Dagster | Airflow, Prefect, Mage | Software-defined assets match ELT mental model; free local UI; type-safe definitions |
+| Cloud orchestrator | Cloud Scheduler + Cloud Run | Cloud Composer ($400+/mo), self-managed Airflow ($30+/mo), Cloud Workflows | Linear DAG with no fan-out -- Scheduler+Run costs $0.10/mo and handles the use case |
+| Reference DAG | Airflow DAG included (not used) | Omit Airflow entirely | Shows familiarity with industry standard; TaskGroups, SLA, retries demonstrate production patterns |
+| Container base | python:3.12-slim | Alpine, distroless | glibc compatibility with DuckDB/NumPy -- Alpine's musl causes segfaults with C extensions |
+| HTTP framework | stdlib http.server | Flask, FastAPI | Cloud Run handles TLS/LB; framework adds 30MB + 200ms cold start for zero benefit |
+| Logging | Structured JSON | print(), Python logging | Cloud Logging indexes JSON fields (severity, message) automatically |
+| Auth model | IAM-based (no app-level auth) | API keys, JWT tokens | Cloud Run + Cloud Scheduler authenticate via OIDC at infrastructure layer |
+
 ## Project Structure
 
 ```
@@ -248,6 +286,14 @@ The Airflow DAG in `src/airflow_dags/claims_etl_dag.py` is a reference implement
 - **Tags and documentation** for DAG discoverability
 
 This DAG exists to show interviewers that the author understands Airflow deeply, while choosing a more cost-effective deployment strategy.
+
+## What I Would Change
+
+- **Share SQL transforms as a package** -- P01 SQL files are copied into the Docker image; should be a shared Python package or git submodule
+- **Add retry logic to Cloud Run entrypoint** -- current handler has no retry on transient BigQuery errors; exponential backoff would improve reliability
+- **Test the Airflow DAG beyond syntax** -- DAG is only syntax-parsed; should have import tests and mock operator tests to prove it works
+- **Add pipeline metrics** -- no custom metrics emitted; Cloud Monitoring custom metrics (rows processed, duration, errors) would enable dashboarding
+- **Consider Dagster Cloud** -- Dagster+ (cloud-hosted) would eliminate the local-vs-cloud orchestrator split for teams that can afford it
 
 ## Related Docs
 

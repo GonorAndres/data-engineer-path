@@ -1,8 +1,8 @@
 ---
 tags: [fundamentals, actuarial, loss-triangles, reserving]
-status: draft
+status: complete
 created: 2026-03-14
-updated: 2026-03-14
+updated: 2026-03-15
 ---
 
 # Loss Triangle Construction

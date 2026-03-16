@@ -116,14 +116,28 @@ def generate_event(malformed_rate: float = 0.05) -> dict[str, Any]:
     return generate_valid_event()
 
 
+def _flush_futures(futures: list) -> None:
+    """Await all pending publish futures, logging any errors."""
+    for f in futures:
+        try:
+            f.result(timeout=10)
+        except Exception as e:
+            logger.warning("Publish failed: %s", e)
+
+
 def publish_events(
     project_id: str,
     topic_id: str,
     rate: float,
     duration: int,
     malformed_rate: float = 0.05,
-) -> int:
+    batch_size: int = 100,
+) -> dict[str, int]:
     """Publish claim events to Pub/Sub at the specified rate.
+
+    Uses async batch publishing: futures are collected and flushed every
+    ``batch_size`` events instead of blocking on each individual publish.
+    This allows much higher throughput for high-rate event generation.
 
     Args:
         project_id: GCP project ID.
@@ -131,47 +145,61 @@ def publish_events(
         rate: Target events per second.
         duration: Total seconds to run.
         malformed_rate: Fraction of events that should be malformed.
+        batch_size: Number of events to buffer before flushing futures.
 
     Returns:
-        Total number of events published.
+        Dict with counts: ``total``, ``normal``, ``malformed``.
     """
     publisher = pubsub_v1.PublisherClient()
     topic_path = publisher.topic_path(project_id, topic_id)
 
-    interval = 1.0 / rate if rate > 0 else 1.0
-    total_published = 0
+    futures: list = []
+    counts: dict[str, int] = {"total": 0, "normal": 0, "malformed": 0}
+    interval = 1.0 / rate if rate > 0 else 0.01
     end_time = time.monotonic() + duration
 
     logger.info(
-        "Starting simulator: project=%s topic=%s rate=%.1f/s duration=%ds",
+        "Starting simulator: project=%s topic=%s rate=%.1f/s duration=%ds batch_size=%d",
         project_id,
         topic_id,
         rate,
         duration,
+        batch_size,
     )
 
     while time.monotonic() < end_time:
         event = generate_event(malformed_rate=malformed_rate)
         data = json.dumps(event).encode("utf-8")
 
+        # Fire-and-forget publish
         future = publisher.publish(
             topic_path,
             data=data,
             event_type="claim_submission",
             source="claims_simulator",
         )
-        message_id = future.result(timeout=30)
-        total_published += 1
+        futures.append(future)
+        counts["total"] += 1
+        if "_injected_defect" in event:
+            counts["malformed"] += 1
+        else:
+            counts["normal"] += 1
 
-        if total_published % 10 == 0:
+        # Periodic flush
+        if len(futures) >= batch_size:
+            _flush_futures(futures)
+            futures = []
             logger.info(
-                "Published %d events (last message_id=%s)", total_published, message_id
+                "Flushed batch -- published %d events so far", counts["total"]
             )
 
-        time.sleep(interval)
+        if interval > 0.001:  # skip sleep for very high rates
+            time.sleep(interval)
 
-    logger.info("Simulator finished. Total events published: %d", total_published)
-    return total_published
+    # Final flush
+    _flush_futures(futures)
+    logger.info("Simulator finished. Total events published: %d", counts["total"])
+    return counts
 
 
 def main() -> None:
@@ -189,6 +217,12 @@ def main() -> None:
         default=0.05,
         help="Fraction of events that are intentionally malformed (default 0.05)",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=100,
+        help="Flush after this many events (default: 100)",
+    )
 
     args = parser.parse_args()
 
@@ -203,6 +237,7 @@ def main() -> None:
         rate=args.rate,
         duration=args.duration,
         malformed_rate=args.malformed_rate,
+        batch_size=args.batch_size,
     )
 
 

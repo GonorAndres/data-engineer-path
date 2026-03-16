@@ -1,0 +1,42 @@
+{
+  "name": "Streaming Claims Pipeline",
+  "description": "True streaming pipeline for insurance claims processing with watermarks, triggers, late data handling, and accumulating mode. Reads from Pub/Sub, aggregates by coverage type in hourly windows, writes to BigQuery.",
+  "parameters": [
+    {
+      "name": "input_subscription",
+      "label": "Pub/Sub Subscription",
+      "helpText": "Full Pub/Sub subscription path: projects/PROJECT/subscriptions/SUBSCRIPTION",
+      "isOptional": false
+    },
+    {
+      "name": "output_project",
+      "label": "Output GCP Project",
+      "helpText": "GCP project ID for BigQuery output tables",
+      "isOptional": false
+    },
+    {
+      "name": "output_dataset",
+      "label": "Output BigQuery Dataset",
+      "helpText": "BigQuery dataset for output tables (default: claims_analytics)",
+      "isOptional": true
+    },
+    {
+      "name": "window_size_seconds",
+      "label": "Window Size (seconds)",
+      "helpText": "Fixed window size in seconds (default: 3600 = 1 hour)",
+      "isOptional": true
+    },
+    {
+      "name": "allowed_lateness_seconds",
+      "label": "Allowed Lateness (seconds)",
+      "helpText": "How long after watermark to accept late data (default: 3600 = 1 hour)",
+      "isOptional": true
+    },
+    {
+      "name": "early_firing_interval_seconds",
+      "label": "Early Firing Interval (seconds)",
+      "helpText": "Interval for early (speculative) result firings (default: 30)",
+      "isOptional": true
+    }
+  ]
+}

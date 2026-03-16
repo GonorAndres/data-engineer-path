@@ -1,3 +1,10 @@
+---
+tags: [project, portfolio, streaming, pubsub, beam, cloud-run, dataflow]
+status: draft
+created: 2026-03-14
+updated: 2026-03-15
+---
+
 # Project 3: Streaming Claims Intake (Budget Edition)
 
 Event-driven insurance claims intake pipeline using Pub/Sub, Cloud Run, and Apache Beam -- designed to demonstrate streaming architecture concepts while keeping costs under $15/month.
@@ -56,6 +63,35 @@ graph TD
 | Portfolio value | Same Beam code | Same Beam code |
 
 The Beam pipeline code is identical -- the only difference is `--streaming` vs `--no_streaming`. This project proves you can write Beam pipelines without burning $1k/month to keep one running.
+
+## Deployment
+
+**Status**: Deployed to GCP (dev environment)
+**Cloud Run Subscriber**: `dev-claims-subscriber`
+**URL**: https://dev-claims-subscriber-451451662791.us-central1.run.app (IAM-authenticated)
+**Pub/Sub Topic**: `claims-events` (push subscription to Cloud Run)
+**Dead Letter Topic**: `claims-events-dlq`
+**BigQuery Table**: `dev_claims_raw.streaming_claims` (129 claims ingested during testing)
+**Cost**: ~$1-5/month (pay per event + Cloud Run invocation)
+
+### What Broke During Deployment
+
+- **Pub/Sub push authentication**: Push subscription sends unauthenticated requests by default. Cloud Run rejects with 401. Fixed with `--push-auth-service-account` on the subscription
+- **Token creation permission**: Pub/Sub service agent needs `iam.serviceAccountTokenCreator` role to mint OIDC tokens for the pipeline service account
+- **Streaming inserts require pre-existing table**: BigQuery streaming inserts (insert_rows_json) fail with 404 if the target table doesn't exist. Created `streaming_claims` table with `bq mk` before first event
+- **No Dockerfile**: P03 didn't have a Dockerfile. Created one with Flask + gunicorn for Cloud Run deployment
+
+## Decisions & Trade-offs
+
+| Decision | Chosen | Alternatives Considered | Why |
+|----------|--------|------------------------|-----|
+| Message bus | Pub/Sub | Kafka (self-managed), Kinesis | Fully managed, push+pull subscriptions, dead-letter support, GCP-native |
+| Subscriber pattern | Cloud Run push | Pull subscriber (Compute Engine), Cloud Functions | Push is truly event-driven; Cloud Run scales to zero; no polling loop |
+| Aggregation engine | Beam batch mode | Beam streaming, Spark, BigQuery scheduled queries | Batch costs $0.01/run vs $1,000+/mo streaming; proves Beam competence at fraction of cost |
+| Window semantics | Fixed 1-hour windows | Sliding, session windows | Matches claims reporting cadence; simplest correct windowing for hourly summaries |
+| Dead-letter routing | Separate Pub/Sub topic | BigQuery DLQ table, GCS dump | Topic enables message replay and reprocessing; table would lose message metadata |
+| Malformed event rate | 5% intentional errors | 0% (happy path only), 50% stress test | Realistic enough to prove DLQ works without drowning output in errors |
+| Validation location | Cloud Run subscriber | Inside Beam pipeline | Separation of concerns: real-time validation (subscriber) vs batch aggregation (Beam) |
 
 ## Project Structure
 
@@ -175,6 +211,14 @@ python src/beam_pipeline.py \
 > A streaming Dataflow job costs ~$1,000-2,000/month for minimum worker configuration
 > and cannot be stopped without manual intervention. The batch mode achieves the same
 > result for ~$0.01/run.
+
+## What I Would Change
+
+- **Add schema registry** -- JSON events have no schema contract; Avro + Schema Registry would catch breaking changes before they hit the pipeline
+- **Implement exactly-once semantics** -- current subscriber can process duplicates on retry; BigQuery MERGE or deduplication window would fix this
+- **Add backpressure handling** -- Cloud Run subscriber accepts all messages; should implement flow control for burst scenarios
+- **Use Dataflow templates** -- current Beam pipeline requires rebuilding; Flex Templates would allow parameterized, reusable pipeline runs
+- **Add end-to-end integration test** -- unit tests cover each component; no test publishes to emulator and verifies BigQuery output
 
 ## Builds On
 

@@ -1,0 +1,14 @@
+# Tools dependencies
+# Install: pip install -r tools/requirements.txt
+
+# BigQuery cost estimator
+google-cloud-bigquery>=3.0.0
+
+# GCS profiler - GCS support
+google-cloud-storage>=2.0.0
+
+# GCS profiler - Parquet reading
+pyarrow>=14.0.0
+
+# GCS profiler - CSV profiling (fast, SQL-based)
+duckdb>=1.0.0

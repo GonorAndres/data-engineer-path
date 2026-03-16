@@ -1,0 +1,59 @@
+== Step 5: End-to-End Verification ==
+Date: 2026-03-16
+Project: project-ad7a5be2-a1c7-4510-82d
+Region: us-central1
+
+== BigQuery Tables ==
+
+=== dev_claims_raw ===
+| table_id           | row_count |
+| raw_claim_payments |      2654 |
+| raw_claims         |       608 |
+| raw_coverages      |         5 |
+| raw_policies       |       800 |
+| raw_policyholders  |       500 |
+| streaming_claims   |       129 |
+
+=== dev_claims_staging ===
+| stg_claim_payments |      2654 |
+| stg_claims         |       608 |
+| stg_coverages      |         5 |
+| stg_policies       |       800 |
+| stg_policyholders  |       500 |
+
+=== dev_claims_intermediate ===
+| int_claim_payments_cumulative |      2654 |
+| int_claims_enriched           |       608 |
+| int_policy_exposure           |       738 |
+
+=== dev_claims_analytics ===
+| dim_coverage       |         5 |
+| dim_date           |      2922 |
+| dim_policy         |       800 |
+| dim_policyholder   |       500 |
+| fct_claim_payments |      2654 |
+| fct_claims         |       608 |
+
+=== dev_claims_reports ===
+| rpt_claim_frequency |        30 |
+| rpt_loss_triangle   |         6 |
+
+Total: 22 tables across 5 datasets.
+
+== Cloud Run Services ==
+
+dev-claims-elt-pipeline:
+  URL: https://dev-claims-elt-pipeline-451451662791.us-central1.run.app
+  Status: Ready
+
+dev-claims-subscriber:
+  URL: https://dev-claims-subscriber-451451662791.us-central1.run.app
+  Status: Ready
+
+== Streaming Verification ==
+129 claims ingested via Pub/Sub -> Cloud Run -> BigQuery
+8 coverage types represented.
+
+== Errors ==
+No new errors after deployment fixes. Older errors were Pub/Sub retries
+from before the streaming_claims table was created (self-resolved).
