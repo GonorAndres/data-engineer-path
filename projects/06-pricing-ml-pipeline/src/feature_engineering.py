@@ -61,12 +61,10 @@ def build_training_set(
     con.execute(sql)
 
     total = con.execute("SELECT COUNT(*) FROM model_training_set").fetchone()[0]
-    train = con.execute(
-        "SELECT COUNT(*) FROM model_training_set WHERE split = 'train'"
-    ).fetchone()[0]
-    test = con.execute(
-        "SELECT COUNT(*) FROM model_training_set WHERE split = 'test'"
-    ).fetchone()[0]
+    train = con.execute("SELECT COUNT(*) FROM model_training_set WHERE split = 'train'").fetchone()[
+        0
+    ]
+    test = con.execute("SELECT COUNT(*) FROM model_training_set WHERE split = 'test'").fetchone()[0]
 
     print(f"  model_training_set: {total:,d} total ({train:,d} train, {test:,d} test)")
     return {"total": total, "train": train, "test": test}
@@ -130,9 +128,7 @@ def get_training_data(
     result = con.execute(query).fetchall()
     columns = [desc[0] for desc in con.description]
 
-    df = pl.DataFrame(
-        {col: [row[i] for row in result] for i, col in enumerate(columns)}
-    )
+    df = pl.DataFrame({col: [row[i] for row in result] for i, col in enumerate(columns)})
 
     # Separate numeric and categorical columns
     numeric_cols = [

@@ -64,30 +64,42 @@ from model_training import (  # noqa: E402
 
 # P01 SQL execution order
 P01_SQL_LAYERS = [
-    ("staging", [
-        "stg_policyholders.sql",
-        "stg_policies.sql",
-        "stg_claims.sql",
-        "stg_claim_payments.sql",
-        "stg_coverages.sql",
-    ]),
-    ("intermediate", [
-        "int_claims_enriched.sql",
-        "int_claim_payments_cumulative.sql",
-        "int_policy_exposure.sql",
-    ]),
-    ("marts", [
-        "dim_date.sql",
-        "dim_policyholder.sql",
-        "dim_policy.sql",
-        "dim_coverage.sql",
-        "fct_claims.sql",
-        "fct_claim_payments.sql",
-    ]),
-    ("reports", [
-        "rpt_loss_triangle.sql",
-        "rpt_claim_frequency.sql",
-    ]),
+    (
+        "staging",
+        [
+            "stg_policyholders.sql",
+            "stg_policies.sql",
+            "stg_claims.sql",
+            "stg_claim_payments.sql",
+            "stg_coverages.sql",
+        ],
+    ),
+    (
+        "intermediate",
+        [
+            "int_claims_enriched.sql",
+            "int_claim_payments_cumulative.sql",
+            "int_policy_exposure.sql",
+        ],
+    ),
+    (
+        "marts",
+        [
+            "dim_date.sql",
+            "dim_policyholder.sql",
+            "dim_policy.sql",
+            "dim_coverage.sql",
+            "fct_claims.sql",
+            "fct_claim_payments.sql",
+        ],
+    ),
+    (
+        "reports",
+        [
+            "rpt_loss_triangle.sql",
+            "rpt_claim_frequency.sql",
+        ],
+    ),
 ]
 
 P01_RAW_TABLES = {
@@ -114,14 +126,12 @@ def ensure_p01_data(con: duckdb.DuckDBPyConnection, seed: int = 42) -> None:
     p01_data_dir = P01_ROOT / "data" / "sample_data"
 
     # Check if P01 CSVs exist
-    csvs_exist = all(
-        (p01_data_dir / csv_file).exists()
-        for csv_file in P01_RAW_TABLES
-    )
+    csvs_exist = all((p01_data_dir / csv_file).exists() for csv_file in P01_RAW_TABLES)
 
     if not csvs_exist:
         print("  P01 CSVs not found, generating synthetic data...")
         from data_generator import ClaimsDataGenerator
+
         generator = ClaimsDataGenerator(seed=seed)
         p01_data_dir.mkdir(parents=True, exist_ok=True)
         generator.generate_all(str(p01_data_dir))
@@ -131,8 +141,7 @@ def ensure_p01_data(con: duckdb.DuckDBPyConnection, seed: int = 42) -> None:
     for csv_file, table_name in P01_RAW_TABLES.items():
         filepath = p01_data_dir / csv_file
         con.execute(
-            f"CREATE OR REPLACE TABLE {table_name} AS "
-            f"SELECT * FROM read_csv_auto('{filepath}')"
+            f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_csv_auto('{filepath}')"
         )
         count = con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"    {table_name:<25s} {count:>6,d} rows")
@@ -238,9 +247,7 @@ def run_pipeline(
         exp_query = """
             SELECT exposure_years FROM model_training_set WHERE split = 'train'
         """
-        exposure = np.array(
-            [r[0] for r in con.execute(exp_query).fetchall()], dtype=np.float64
-        )
+        exposure = np.array([r[0] for r in con.execute(exp_query).fetchall()], dtype=np.float64)
         model = train_frequency_model(X_train, y_freq, features, exposure=exposure)
     elif target == "severity":
         model = train_severity_model(X_train, y_train, features)
@@ -279,9 +286,7 @@ def run_pipeline(
 
 def main() -> None:
     """CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="Insurance Pricing ML Feature Pipeline"
-    )
+    parser = argparse.ArgumentParser(description="Insurance Pricing ML Feature Pipeline")
     parser.add_argument(
         "--seed",
         type=int,

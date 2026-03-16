@@ -36,10 +36,38 @@ from faker import Faker
 # ---------------------------------------------------------------------------
 
 MEXICAN_STATES: list[str] = [
-    "AGS", "BC", "BCS", "CAM", "CHIS", "CHIH", "CDMX", "COAH", "COL",
-    "DGO", "GTO", "GRO", "HGO", "JAL", "MEX", "MICH", "MOR", "NAY",
-    "NL", "OAX", "PUE", "QRO", "QROO", "SLP", "SIN", "SON", "TAB",
-    "TAMS", "TLAX", "VER", "YUC", "ZAC",
+    "AGS",
+    "BC",
+    "BCS",
+    "CAM",
+    "CHIS",
+    "CHIH",
+    "CDMX",
+    "COAH",
+    "COL",
+    "DGO",
+    "GTO",
+    "GRO",
+    "HGO",
+    "JAL",
+    "MEX",
+    "MICH",
+    "MOR",
+    "NAY",
+    "NL",
+    "OAX",
+    "PUE",
+    "QRO",
+    "QROO",
+    "SLP",
+    "SIN",
+    "SON",
+    "TAB",
+    "TAMS",
+    "TLAX",
+    "VER",
+    "YUC",
+    "ZAC",
 ]
 
 # Higher-population states get more weight so the synthetic data resembles
@@ -118,31 +146,59 @@ DEVELOPMENT_PATTERNS: dict[str, list[float]] = {
 # -- Causes of loss by coverage type ----------------------------------------
 CAUSE_OF_LOSS: dict[str, list[str]] = {
     "auto": [
-        "collision", "theft", "vandalism", "hail_damage",
-        "hit_and_run", "rollover",
+        "collision",
+        "theft",
+        "vandalism",
+        "hail_damage",
+        "hit_and_run",
+        "rollover",
     ],
     "home": [
-        "fire", "water_damage", "theft", "earthquake",
-        "hurricane", "structural_damage",
+        "fire",
+        "water_damage",
+        "theft",
+        "earthquake",
+        "hurricane",
+        "structural_damage",
     ],
     "liability": [
-        "bodily_injury", "property_damage", "professional_negligence",
+        "bodily_injury",
+        "property_damage",
+        "professional_negligence",
         "product_liability",
     ],
     "health": [
-        "hospitalization", "surgery", "emergency_room",
-        "chronic_treatment", "maternity",
+        "hospitalization",
+        "surgery",
+        "emergency_room",
+        "chronic_treatment",
+        "maternity",
     ],
     "life": ["death_natural", "death_accidental"],
 }
 
 # -- Occupations (Mexican context) ------------------------------------------
 OCCUPATIONS: list[str] = [
-    "ingeniero", "medico", "abogado", "contador", "profesor",
-    "comerciante", "servidor_publico", "obrero", "chofer",
-    "arquitecto", "enfermero", "agricultor", "empresario",
-    "programador", "actuario", "farmaceutico", "veterinario",
-    "electricista", "mecanico", "estudiante",
+    "ingeniero",
+    "medico",
+    "abogado",
+    "contador",
+    "profesor",
+    "comerciante",
+    "servidor_publico",
+    "obrero",
+    "chofer",
+    "arquitecto",
+    "enfermero",
+    "agricultor",
+    "empresario",
+    "programador",
+    "actuario",
+    "farmaceutico",
+    "veterinario",
+    "electricista",
+    "mecanico",
+    "estudiante",
 ]
 
 # -- Coverage-type weights (market share in portfolio) ----------------------
@@ -159,6 +215,7 @@ COVERAGE_WEIGHTS: dict[str, float] = {
 # ---------------------------------------------------------------------------
 # Main generator
 # ---------------------------------------------------------------------------
+
 
 class ClaimsDataGenerator:
     """Generates synthetic insurance data with actuarial-realistic distributions.
@@ -196,9 +253,7 @@ class ClaimsDataGenerator:
 
     def _weighted_state(self) -> str:
         """Pick a Mexican state with higher weight for populous states."""
-        weights = np.array([
-            3.0 if s in _HIGH_POP_STATES else 1.0 for s in MEXICAN_STATES
-        ])
+        weights = np.array([3.0 if s in _HIGH_POP_STATES else 1.0 for s in MEXICAN_STATES])
         weights /= weights.sum()
         idx = self.rng.choice(len(MEXICAN_STATES), p=weights)
         return MEXICAN_STATES[idx]
@@ -234,21 +289,23 @@ class ClaimsDataGenerator:
                 START_DATE - timedelta(days=365),
                 date(2024, 12, 31),
             )
-            policyholders.append({
-                "policyholder_id": i,
-                "first_name": (
-                    self.fake.first_name_male()
-                    if gender == "M"
-                    else self.fake.first_name_female()
-                ),
-                "last_name": self.fake.last_name(),
-                "date_of_birth": dob.isoformat(),
-                "gender": gender,
-                "state_code": self._weighted_state(),
-                "city": self.fake.city(),
-                "occupation": self.rng.choice(OCCUPATIONS),
-                "registration_date": registration_date.isoformat(),
-            })
+            policyholders.append(
+                {
+                    "policyholder_id": i,
+                    "first_name": (
+                        self.fake.first_name_male()
+                        if gender == "M"
+                        else self.fake.first_name_female()
+                    ),
+                    "last_name": self.fake.last_name(),
+                    "date_of_birth": dob.isoformat(),
+                    "gender": gender,
+                    "state_code": self._weighted_state(),
+                    "city": self.fake.city(),
+                    "occupation": self.rng.choice(OCCUPATIONS),
+                    "registration_date": registration_date.isoformat(),
+                }
+            )
         return policyholders
 
     # -- 2. Policies --------------------------------------------------------
@@ -285,9 +342,7 @@ class ClaimsDataGenerator:
         assignments: list[int] = list(holder_ids)
         extra = n - len(holder_ids)
         if extra > 0:
-            assignments.extend(
-                self.rng.choice(holder_ids, size=extra).tolist()
-            )
+            assignments.extend(self.rng.choice(holder_ids, size=extra).tolist())
         self.rng.shuffle(assignments)  # type: ignore[arg-type]
 
         # Coverage types weighted by market share.
@@ -304,29 +359,17 @@ class ClaimsDataGenerator:
             # policies start in 2020-2021, 25% in 2022-2023, 15% in 2024-2025.
             year_roll = float(self.rng.random())
             if year_roll < 0.35:
-                eff_date = self._random_date_between(
-                    date(2020, 1, 1), date(2020, 12, 31)
-                )
+                eff_date = self._random_date_between(date(2020, 1, 1), date(2020, 12, 31))
             elif year_roll < 0.60:
-                eff_date = self._random_date_between(
-                    date(2021, 1, 1), date(2021, 12, 31)
-                )
+                eff_date = self._random_date_between(date(2021, 1, 1), date(2021, 12, 31))
             elif year_roll < 0.75:
-                eff_date = self._random_date_between(
-                    date(2022, 1, 1), date(2022, 12, 31)
-                )
+                eff_date = self._random_date_between(date(2022, 1, 1), date(2022, 12, 31))
             elif year_roll < 0.87:
-                eff_date = self._random_date_between(
-                    date(2023, 1, 1), date(2023, 12, 31)
-                )
+                eff_date = self._random_date_between(date(2023, 1, 1), date(2023, 12, 31))
             elif year_roll < 0.95:
-                eff_date = self._random_date_between(
-                    date(2024, 1, 1), date(2024, 12, 31)
-                )
+                eff_date = self._random_date_between(date(2024, 1, 1), date(2024, 12, 31))
             else:
-                eff_date = self._random_date_between(
-                    date(2025, 1, 1), date(2025, 6, 30)
-                )
+                eff_date = self._random_date_between(date(2025, 1, 1), date(2025, 6, 30))
 
             exp_date = eff_date + timedelta(days=365)
 
@@ -341,28 +384,22 @@ class ClaimsDataGenerator:
                     p=[0.30, 0.60, 0.10],
                 )
             else:
-                status = str(
-                    self.rng.choice(["active", "cancelled"], p=[0.92, 0.08])
-                )
+                status = str(self.rng.choice(["active", "cancelled"], p=[0.92, 0.08]))
 
-            policies.append({
-                "policy_id": i,
-                "policyholder_id": int(holder_id),
-                "policy_number": f"POL-{eff_date.year}-{i:05d}",
-                "coverage_type": coverage,
-                "effective_date": eff_date.isoformat(),
-                "expiration_date": exp_date.isoformat(),
-                "annual_premium": self._round_mxn(
-                    float(self.rng.uniform(prem_lo, prem_hi))
-                ),
-                "deductible": self._round_mxn(
-                    float(self.rng.uniform(ded_lo, ded_hi))
-                ),
-                "coverage_limit": self._round_mxn(
-                    float(self.rng.uniform(lim_lo, lim_hi))
-                ),
-                "status": str(status),
-            })
+            policies.append(
+                {
+                    "policy_id": i,
+                    "policyholder_id": int(holder_id),
+                    "policy_number": f"POL-{eff_date.year}-{i:05d}",
+                    "coverage_type": coverage,
+                    "effective_date": eff_date.isoformat(),
+                    "expiration_date": exp_date.isoformat(),
+                    "annual_premium": self._round_mxn(float(self.rng.uniform(prem_lo, prem_hi))),
+                    "deductible": self._round_mxn(float(self.rng.uniform(ded_lo, ded_hi))),
+                    "coverage_limit": self._round_mxn(float(self.rng.uniform(lim_lo, lim_hi))),
+                    "status": str(status),
+                }
+            )
         return policies
 
     # -- 3. Claims ----------------------------------------------------------
@@ -458,9 +495,7 @@ class ClaimsDataGenerator:
 
                 # Initial reserve is an estimate -- add noise around ultimate.
                 reserve_noise = float(self.rng.normal(1.0, 0.15))
-                initial_reserve = self._round_mxn(
-                    ultimate * max(reserve_noise, 0.3)
-                )
+                initial_reserve = self._round_mxn(ultimate * max(reserve_noise, 0.3))
 
                 # Determine claim status.  Recent claims are more likely open.
                 accident_age_days = (VALUATION_DATE - accident_date).days
@@ -501,23 +536,23 @@ class ClaimsDataGenerator:
                     # refined when payments are generated).
                     current_reserve = initial_reserve
 
-                claims.append({
-                    "claim_id": claim_id,
-                    "policy_id": pol["policy_id"],
-                    "claim_number": claim_number,
-                    "accident_date": accident_date.isoformat(),
-                    "report_date": report_date.isoformat(),
-                    "close_date": close_date,
-                    "claim_status": claim_status,
-                    "cause_of_loss": str(
-                        self.rng.choice(CAUSE_OF_LOSS[coverage])
-                    ),
-                    "initial_reserve": initial_reserve,
-                    "current_reserve": self._round_mxn(current_reserve),
-                    # Stash for payment generation (not written to CSV).
-                    "_ultimate": ultimate,
-                    "_coverage_type": coverage,
-                })
+                claims.append(
+                    {
+                        "claim_id": claim_id,
+                        "policy_id": pol["policy_id"],
+                        "claim_number": claim_number,
+                        "accident_date": accident_date.isoformat(),
+                        "report_date": report_date.isoformat(),
+                        "close_date": close_date,
+                        "claim_status": claim_status,
+                        "cause_of_loss": str(self.rng.choice(CAUSE_OF_LOSS[coverage])),
+                        "initial_reserve": initial_reserve,
+                        "current_reserve": self._round_mxn(current_reserve),
+                        # Stash for payment generation (not written to CSV).
+                        "_ultimate": ultimate,
+                        "_coverage_type": coverage,
+                    }
+                )
 
         return claims
 
@@ -584,17 +619,11 @@ class ClaimsDataGenerator:
 
                 # Add jitter to incremental percentage (+/- 10 %).
                 jitter = float(self.rng.normal(1.0, 0.05))
-                incremental_amount = self._round_mxn(
-                    ultimate * incremental_pct * max(jitter, 0.5)
-                )
+                incremental_amount = self._round_mxn(ultimate * incremental_pct * max(jitter, 0.5))
 
                 # Payment date: within the development year, after report.
-                dev_year_start = accident_date + timedelta(
-                    days=int(dev_year * 365.25)
-                )
-                dev_year_end = accident_date + timedelta(
-                    days=int((dev_year + 1) * 365.25) - 1
-                )
+                dev_year_start = accident_date + timedelta(days=int(dev_year * 365.25))
+                dev_year_end = accident_date + timedelta(days=int((dev_year + 1) * 365.25) - 1)
                 pay_earliest = max(dev_year_start, report_date)
                 pay_latest = min(dev_year_end, VALUATION_DATE)
                 if pay_earliest > pay_latest:
@@ -602,74 +631,60 @@ class ClaimsDataGenerator:
                     continue
 
                 # One indemnity payment per development year.
-                payment_date = self._random_date_between(
-                    pay_earliest, pay_latest
-                )
-                cumulative_paid = self._round_mxn(
-                    cumulative_paid + incremental_amount
-                )
+                payment_date = self._random_date_between(pay_earliest, pay_latest)
+                cumulative_paid = self._round_mxn(cumulative_paid + incremental_amount)
                 payment_seq += 1
-                payments.append({
-                    "payment_id": payment_seq,
-                    "claim_id": claim["claim_id"],
-                    "payment_date": payment_date.isoformat(),
-                    "payment_amount": self._round_mxn(incremental_amount),
-                    "payment_type": "indemnity",
-                    "cumulative_paid": cumulative_paid,
-                })
+                payments.append(
+                    {
+                        "payment_id": payment_seq,
+                        "claim_id": claim["claim_id"],
+                        "payment_date": payment_date.isoformat(),
+                        "payment_amount": self._round_mxn(incremental_amount),
+                        "payment_type": "indemnity",
+                        "cumulative_paid": cumulative_paid,
+                    }
+                )
                 last_payment_date = payment_date
 
                 # Expense payment (adjuster / legal fees): ~5-15 % of
                 # the incremental indemnity, ~15 % of dev years.
                 if self.rng.random() < 0.15:
                     expense_pct = float(self.rng.uniform(0.05, 0.15))
-                    expense_amount = self._round_mxn(
-                        incremental_amount * expense_pct
-                    )
+                    expense_amount = self._round_mxn(incremental_amount * expense_pct)
                     if expense_amount > 0:
-                        expense_date = self._random_date_between(
-                            pay_earliest, pay_latest
-                        )
-                        cumulative_paid = self._round_mxn(
-                            cumulative_paid + expense_amount
-                        )
+                        expense_date = self._random_date_between(pay_earliest, pay_latest)
+                        cumulative_paid = self._round_mxn(cumulative_paid + expense_amount)
                         payment_seq += 1
-                        payments.append({
-                            "payment_id": payment_seq,
-                            "claim_id": claim["claim_id"],
-                            "payment_date": expense_date.isoformat(),
-                            "payment_amount": expense_amount,
-                            "payment_type": "expense",
-                            "cumulative_paid": cumulative_paid,
-                        })
-                        last_payment_date = max(
-                            last_payment_date or expense_date, expense_date
+                        payments.append(
+                            {
+                                "payment_id": payment_seq,
+                                "claim_id": claim["claim_id"],
+                                "payment_date": expense_date.isoformat(),
+                                "payment_amount": expense_amount,
+                                "payment_type": "expense",
+                                "cumulative_paid": cumulative_paid,
+                            }
                         )
+                        last_payment_date = max(last_payment_date or expense_date, expense_date)
 
                 # Recovery (~3 % chance per dev year).
                 if self.rng.random() < 0.03:
                     recovery_pct = float(self.rng.uniform(0.05, 0.20))
-                    recovery_amount = self._round_mxn(
-                        -(incremental_amount * recovery_pct)
-                    )
-                    recovery_date = self._random_date_between(
-                        pay_earliest, pay_latest
-                    )
-                    cumulative_paid = self._round_mxn(
-                        cumulative_paid + recovery_amount
-                    )
+                    recovery_amount = self._round_mxn(-(incremental_amount * recovery_pct))
+                    recovery_date = self._random_date_between(pay_earliest, pay_latest)
+                    cumulative_paid = self._round_mxn(cumulative_paid + recovery_amount)
                     payment_seq += 1
-                    payments.append({
-                        "payment_id": payment_seq,
-                        "claim_id": claim["claim_id"],
-                        "payment_date": recovery_date.isoformat(),
-                        "payment_amount": recovery_amount,
-                        "payment_type": "recovery",
-                        "cumulative_paid": cumulative_paid,
-                    })
-                    last_payment_date = max(
-                        last_payment_date or recovery_date, recovery_date
+                    payments.append(
+                        {
+                            "payment_id": payment_seq,
+                            "claim_id": claim["claim_id"],
+                            "payment_date": recovery_date.isoformat(),
+                            "payment_amount": recovery_amount,
+                            "payment_type": "recovery",
+                            "cumulative_paid": cumulative_paid,
+                        }
                     )
+                    last_payment_date = max(last_payment_date or recovery_date, recovery_date)
 
                 prev_cum_pct = target_cum_pct
 
@@ -681,14 +696,10 @@ class ClaimsDataGenerator:
                     existing_close = date.fromisoformat(claim["close_date"])
                     if existing_close < last_payment_date:
                         claim["close_date"] = (
-                            last_payment_date
-                            + timedelta(days=int(self.rng.integers(1, 30)))
+                            last_payment_date + timedelta(days=int(self.rng.integers(1, 30)))
                         ).isoformat()
                         # Clamp to valuation date.
-                        if (
-                            date.fromisoformat(claim["close_date"])
-                            > VALUATION_DATE
-                        ):
+                        if date.fromisoformat(claim["close_date"]) > VALUATION_DATE:
                             claim["close_date"] = VALUATION_DATE.isoformat()
             else:
                 # Open / reopened: outstanding = ultimate - paid.
@@ -714,39 +725,30 @@ class ClaimsDataGenerator:
             {
                 "coverage_type": "auto",
                 "coverage_category": "property_casualty",
-                "description": (
-                    "Seguro de automovil: colision, robo, responsabilidad civil"
-                ),
+                "description": ("Seguro de automovil: colision, robo, responsabilidad civil"),
             },
             {
                 "coverage_type": "home",
                 "coverage_category": "property_casualty",
-                "description": (
-                    "Seguro de hogar: incendio, robo, desastres naturales"
-                ),
+                "description": ("Seguro de hogar: incendio, robo, desastres naturales"),
             },
             {
                 "coverage_type": "liability",
                 "coverage_category": "casualty",
                 "description": (
-                    "Seguro de responsabilidad civil: danos a terceros, "
-                    "negligencia profesional"
+                    "Seguro de responsabilidad civil: danos a terceros, negligencia profesional"
                 ),
             },
             {
                 "coverage_type": "health",
                 "coverage_category": "health",
-                "description": (
-                    "Seguro de gastos medicos: hospitalizacion, cirugia, "
-                    "emergencias"
-                ),
+                "description": ("Seguro de gastos medicos: hospitalizacion, cirugia, emergencias"),
             },
             {
                 "coverage_type": "life",
                 "coverage_category": "life",
                 "description": (
-                    "Seguro de vida: muerte natural o accidental, "
-                    "beneficiarios designados"
+                    "Seguro de vida: muerte natural o accidental, beneficiarios designados"
                 ),
             },
         ]
@@ -787,10 +789,7 @@ class ClaimsDataGenerator:
         coverages = self.generate_coverages()
 
         # Strip internal keys (prefixed with "_") before writing.
-        claims_clean = [
-            {k: v for k, v in c.items() if not k.startswith("_")}
-            for c in claims
-        ]
+        claims_clean = [{k: v for k, v in c.items() if not k.startswith("_")} for c in claims]
 
         ext = "parquet" if output_format == "parquet" else "csv"
         writer = self._write_parquet if output_format == "parquet" else self._write_csv
@@ -838,13 +837,11 @@ class ClaimsDataGenerator:
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     """CLI entry point for data generation."""
     parser = argparse.ArgumentParser(
-        description=(
-            "Generate synthetic insurance claims data for the "
-            "Claims Warehouse project."
-        ),
+        description=("Generate synthetic insurance claims data for the Claims Warehouse project."),
     )
     parser.add_argument(
         "--output",

@@ -105,16 +105,14 @@ class PipelineRunner:
         for csv_file, table_name in RAW_TABLES.items():
             filepath = data_dir / csv_file
             if not filepath.exists():
-                raise FileNotFoundError(
-                    f"Missing data file: {filepath}"
-                )
+                raise FileNotFoundError(f"Missing data file: {filepath}")
             self._con.execute(
                 f"CREATE OR REPLACE TABLE {table_name} AS "
                 f"SELECT * FROM read_csv_auto('{filepath}')"
             )
-            count = self._con.execute(
-                f"SELECT COUNT(*) FROM {table_name}"
-            ).fetchone()[0]
+            count = self._con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[
+                0
+            ]
             row_counts[table_name] = count
 
         return row_counts
@@ -190,9 +188,7 @@ class PipelineRunner:
             self.load_raw_tables(data_dir=data_dir)
 
             for layer_name, sql_files in SQL_LAYERS:
-                layer_result = self.execute_sql_layer(
-                    layer_name, sql_files
-                )
+                layer_result = self.execute_sql_layer(layer_name, sql_files)
                 pipeline_result.layers.append(layer_result)
                 if layer_result.errors:
                     pipeline_result.success = False
@@ -221,9 +217,7 @@ class PipelineRunner:
             Number of rows, or -1 if the table does not exist.
         """
         try:
-            result = self._con.execute(
-                f"SELECT COUNT(*) FROM {table_name}"
-            ).fetchone()
+            result = self._con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()
             return result[0] if result else -1
         except duckdb.CatalogException:
             return -1
@@ -237,6 +231,7 @@ class PipelineRunner:
 # Convenience CLI
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     """Run the full pipeline from the command line."""
     runner = PipelineRunner()
@@ -245,8 +240,7 @@ def main() -> None:
     if result.success:
         print("Pipeline completed successfully.")
         for layer in result.layers:
-            print(f"\n  Layer: {layer.layer_name}  "
-                  f"({layer.elapsed_seconds:.2f}s)")
+            print(f"\n  Layer: {layer.layer_name}  ({layer.elapsed_seconds:.2f}s)")
             for table, count in layer.tables.items():
                 print(f"    {table:<40s} {count:>6,d} rows")
     else:

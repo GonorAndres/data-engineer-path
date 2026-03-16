@@ -82,9 +82,9 @@ def build_streaming_pipeline(
     )
 
     # 2. Parse, validate, route dead letters
-    parsed = raw | "ParseAndValidate" >> beam.ParDo(
-        ParseAndValidateClaim()
-    ).with_outputs(ParseAndValidateClaim.DEAD_LETTER_TAG, main="valid")
+    parsed = raw | "ParseAndValidate" >> beam.ParDo(ParseAndValidateClaim()).with_outputs(
+        ParseAndValidateClaim.DEAD_LETTER_TAG, main="valid"
+    )
 
     valid_claims = parsed.valid
     dead_letters = parsed[ParseAndValidateClaim.DEAD_LETTER_TAG]

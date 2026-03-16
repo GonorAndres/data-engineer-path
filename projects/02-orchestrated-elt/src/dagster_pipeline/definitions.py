@@ -34,9 +34,7 @@ daily_pipeline_schedule = ScheduleDefinition(
     name="daily_claims_pipeline",
     cron_schedule="0 6 * * *",  # 06:00 UTC every day
     target=AssetSelection.groups("claims_warehouse"),
-    description=(
-        "Materialize the full claims warehouse pipeline daily at 06:00 UTC."
-    ),
+    description=("Materialize the full claims warehouse pipeline daily at 06:00 UTC."),
 )
 
 # ---------------------------------------------------------------------------

@@ -38,30 +38,42 @@ WATCH_DIR: Path = PROJECT_ROOT / "data" / "incoming"
 # but are listed in a dependency-safe sequence.
 
 SQL_LAYERS: list[tuple[str, list[str]]] = [
-    ("staging", [
-        "stg_policyholders.sql",
-        "stg_policies.sql",
-        "stg_claims.sql",
-        "stg_claim_payments.sql",
-        "stg_coverages.sql",
-    ]),
-    ("intermediate", [
-        "int_claims_enriched.sql",
-        "int_claim_payments_cumulative.sql",
-        "int_policy_exposure.sql",
-    ]),
-    ("marts", [
-        "dim_date.sql",
-        "dim_policyholder.sql",
-        "dim_policy.sql",
-        "dim_coverage.sql",
-        "fct_claims.sql",
-        "fct_claim_payments.sql",
-    ]),
-    ("reports", [
-        "rpt_loss_triangle.sql",
-        "rpt_claim_frequency.sql",
-    ]),
+    (
+        "staging",
+        [
+            "stg_policyholders.sql",
+            "stg_policies.sql",
+            "stg_claims.sql",
+            "stg_claim_payments.sql",
+            "stg_coverages.sql",
+        ],
+    ),
+    (
+        "intermediate",
+        [
+            "int_claims_enriched.sql",
+            "int_claim_payments_cumulative.sql",
+            "int_policy_exposure.sql",
+        ],
+    ),
+    (
+        "marts",
+        [
+            "dim_date.sql",
+            "dim_policyholder.sql",
+            "dim_policy.sql",
+            "dim_coverage.sql",
+            "fct_claims.sql",
+            "fct_claim_payments.sql",
+        ],
+    ),
+    (
+        "reports",
+        [
+            "rpt_loss_triangle.sql",
+            "rpt_claim_frequency.sql",
+        ],
+    ),
 ]
 
 # ---------------------------------------------------------------------------

@@ -29,12 +29,8 @@ import duckdb
 # Hugging Face direct download URLs for freMTPL2 data
 # Original CASdatasets GitHub repo distributes as R package only;
 # these CSVs are hosted on HuggingFace by mabilton/fremtpl2.
-FREQ_URL = (
-    "https://huggingface.co/datasets/mabilton/fremtpl2/resolve/main/freMTPL2freq.csv"
-)
-SEV_URL = (
-    "https://huggingface.co/datasets/mabilton/fremtpl2/resolve/main/freMTPL2sev.csv"
-)
+FREQ_URL = "https://huggingface.co/datasets/mabilton/fremtpl2/resolve/main/freMTPL2freq.csv"
+SEV_URL = "https://huggingface.co/datasets/mabilton/fremtpl2/resolve/main/freMTPL2sev.csv"
 
 
 def download_fremtpl2(dest_dir: Path) -> tuple[Path, Path]:
@@ -299,9 +295,9 @@ def _print_dataset_summary(con: duckdb.DuckDBPyConnection) -> None:
     train_count = con.execute(
         "SELECT COUNT(*) FROM dim_policy WHERE policy_year <= 2023"
     ).fetchone()[0]
-    test_count = con.execute(
-        "SELECT COUNT(*) FROM dim_policy WHERE policy_year > 2023"
-    ).fetchone()[0]
+    test_count = con.execute("SELECT COUNT(*) FROM dim_policy WHERE policy_year > 2023").fetchone()[
+        0
+    ]
 
     print("\n  --- freMTPL2 Dataset Summary ---")
     print(f"  Policies:              {summary[0]:>10,d}")

@@ -26,9 +26,11 @@ from dagster_pipeline.resources import DuckDBResource
 from pipeline.config import DATA_DIR, SQL_DIR, SQL_LAYERS
 
 # Add Project 1's src/ to the import path so we can use the data generator.
-_PROJECT_01_SRC = Path(__file__).resolve().parent.parent.parent.parent / (
-    "01-claims-warehouse"
-) / "src"
+_PROJECT_01_SRC = (
+    Path(__file__).resolve().parent.parent.parent.parent
+    / ("01-claims-warehouse")
+    / "src"
+)
 if str(_PROJECT_01_SRC) not in sys.path:
     sys.path.insert(0, str(_PROJECT_01_SRC))
 
@@ -55,9 +57,7 @@ def _row_counts_for_layer(
             for sql_file in files:
                 table = sql_file.replace(".sql", "")
                 try:
-                    result = con.execute(
-                        f"SELECT COUNT(*) FROM {table}"
-                    ).fetchone()
+                    result = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
                     counts[table] = result[0] if result else 0
                 except Exception:
                     counts[table] = -1
@@ -95,9 +95,7 @@ def raw_data(
     missing = [f for f in expected_files if not (DATA_DIR / f).exists()]
 
     if missing:
-        context.log.info(
-            "Generating sample data -- missing files: %s", missing
-        )
+        context.log.info("Generating sample data -- missing files: %s", missing)
         from data_generator import ClaimsDataGenerator
 
         generator = ClaimsDataGenerator(seed=42)
@@ -111,8 +109,7 @@ def raw_data(
     else:
         context.log.info("All source CSVs already present in %s", DATA_DIR)
         metadata = {
-            f"file/{f}": MetadataValue.path(str(DATA_DIR / f))
-            for f in expected_files
+            f"file/{f}": MetadataValue.path(str(DATA_DIR / f)) for f in expected_files
         }
         metadata["generated"] = MetadataValue.bool(False)
 
@@ -139,7 +136,9 @@ def staging_layer(
 
     start = time.monotonic()
     runner = PipelineRunner(
-        db_path=duckdb_resource.db_path if duckdb_resource.db_path != ":memory:" else None,
+        db_path=duckdb_resource.db_path
+        if duckdb_resource.db_path != ":memory:"
+        else None,
         sql_dir=SQL_DIR,
         data_dir=DATA_DIR,
     )
@@ -152,9 +151,7 @@ def staging_layer(
     runner.close()
 
     if layer_result.errors:
-        raise RuntimeError(
-            f"Staging errors: {'; '.join(layer_result.errors)}"
-        )
+        raise RuntimeError(f"Staging errors: {'; '.join(layer_result.errors)}")
 
     metadata: dict[str, Any] = {
         f"rows/{table}": MetadataValue.int(count)
@@ -164,9 +161,7 @@ def staging_layer(
     for table, count in raw_counts.items():
         metadata[f"raw_rows/{table}"] = MetadataValue.int(count)
 
-    context.log.info(
-        "Staging complete in %.2fs: %s", elapsed, layer_result.tables
-    )
+    context.log.info("Staging complete in %.2fs: %s", elapsed, layer_result.tables)
     return MaterializeResult(metadata=metadata)
 
 
@@ -190,7 +185,9 @@ def intermediate_layer(
 
     start = time.monotonic()
     runner = PipelineRunner(
-        db_path=duckdb_resource.db_path if duckdb_resource.db_path != ":memory:" else None,
+        db_path=duckdb_resource.db_path
+        if duckdb_resource.db_path != ":memory:"
+        else None,
         sql_dir=SQL_DIR,
         data_dir=DATA_DIR,
     )
@@ -204,9 +201,7 @@ def intermediate_layer(
     runner.close()
 
     if layer_result.errors:
-        raise RuntimeError(
-            f"Intermediate errors: {'; '.join(layer_result.errors)}"
-        )
+        raise RuntimeError(f"Intermediate errors: {'; '.join(layer_result.errors)}")
 
     metadata: dict[str, Any] = {
         f"rows/{table}": MetadataValue.int(count)
@@ -214,9 +209,7 @@ def intermediate_layer(
     }
     metadata["elapsed_seconds"] = MetadataValue.float(elapsed)
 
-    context.log.info(
-        "Intermediate complete in %.2fs: %s", elapsed, layer_result.tables
-    )
+    context.log.info("Intermediate complete in %.2fs: %s", elapsed, layer_result.tables)
     return MaterializeResult(metadata=metadata)
 
 
@@ -240,7 +233,9 @@ def marts_layer(
 
     start = time.monotonic()
     runner = PipelineRunner(
-        db_path=duckdb_resource.db_path if duckdb_resource.db_path != ":memory:" else None,
+        db_path=duckdb_resource.db_path
+        if duckdb_resource.db_path != ":memory:"
+        else None,
         sql_dir=SQL_DIR,
         data_dir=DATA_DIR,
     )
@@ -255,9 +250,7 @@ def marts_layer(
     runner.close()
 
     if layer_result.errors:
-        raise RuntimeError(
-            f"Marts errors: {'; '.join(layer_result.errors)}"
-        )
+        raise RuntimeError(f"Marts errors: {'; '.join(layer_result.errors)}")
 
     metadata: dict[str, Any] = {
         f"rows/{table}": MetadataValue.int(count)
@@ -265,17 +258,14 @@ def marts_layer(
     }
     metadata["elapsed_seconds"] = MetadataValue.float(elapsed)
 
-    context.log.info(
-        "Marts complete in %.2fs: %s", elapsed, layer_result.tables
-    )
+    context.log.info("Marts complete in %.2fs: %s", elapsed, layer_result.tables)
     return MaterializeResult(metadata=metadata)
 
 
 @asset(
     deps=[marts_layer],
     description=(
-        "Execute reports SQL transforms "
-        "(rpt_loss_triangle, rpt_claim_frequency)."
+        "Execute reports SQL transforms (rpt_loss_triangle, rpt_claim_frequency)."
     ),
     group_name="claims_warehouse",
     tags={"layer": "reports", "domain": "insurance"},
@@ -290,7 +280,9 @@ def reports_layer(
 
     start = time.monotonic()
     runner = PipelineRunner(
-        db_path=duckdb_resource.db_path if duckdb_resource.db_path != ":memory:" else None,
+        db_path=duckdb_resource.db_path
+        if duckdb_resource.db_path != ":memory:"
+        else None,
         sql_dir=SQL_DIR,
         data_dir=DATA_DIR,
     )
@@ -306,9 +298,7 @@ def reports_layer(
     runner.close()
 
     if layer_result.errors:
-        raise RuntimeError(
-            f"Reports errors: {'; '.join(layer_result.errors)}"
-        )
+        raise RuntimeError(f"Reports errors: {'; '.join(layer_result.errors)}")
 
     metadata: dict[str, Any] = {
         f"rows/{table}": MetadataValue.int(count)
@@ -316,7 +306,5 @@ def reports_layer(
     }
     metadata["elapsed_seconds"] = MetadataValue.float(elapsed)
 
-    context.log.info(
-        "Reports complete in %.2fs: %s", elapsed, layer_result.tables
-    )
+    context.log.info("Reports complete in %.2fs: %s", elapsed, layer_result.tables)
     return MaterializeResult(metadata=metadata)

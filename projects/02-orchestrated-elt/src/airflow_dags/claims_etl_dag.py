@@ -252,14 +252,13 @@ with DAG(
     render_template_as_native_obj=True,
     doc_md=__doc__,
 ) as dag:
-
     # -- 1. Data generation ---------------------------------------------------
     generate_data = PythonOperator(
         task_id="generate_data",
         python_callable=_generate_sample_data,
         doc="Generate synthetic insurance data (policyholders, policies, "
-            "claims, payments, coverages). In production, this would be "
-            "replaced by a GCS sensor or an extract from a source system.",
+        "claims, payments, coverages). In production, this would be "
+        "replaced by a GCS sensor or an extract from a source system.",
     )
 
     # -- 2. Staging layer (5 tasks) -------------------------------------------
@@ -315,7 +314,7 @@ with DAG(
         task_id="quality_checks",
         python_callable=_check_data_quality,
         doc="Run data quality validation. Branches to notify_success or "
-            "notify_failure based on check results.",
+        "notify_failure based on check results.",
     )
 
     # -- 7. Notification tasks ------------------------------------------------

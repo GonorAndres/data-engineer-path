@@ -105,13 +105,15 @@ def compute_lift_table(
         avg_predicted = float(np.mean(pred_slice))
         lift = avg_actual / overall_avg
 
-        table.append({
-            "decile": i + 1,
-            "avg_predicted": round(avg_predicted, 2),
-            "avg_actual": round(avg_actual, 2),
-            "lift": round(lift, 4),
-            "count": len(actual_slice),
-        })
+        table.append(
+            {
+                "decile": i + 1,
+                "avg_predicted": round(avg_predicted, 2),
+                "avg_actual": round(avg_actual, 2),
+                "lift": round(lift, 4),
+                "count": len(actual_slice),
+            }
+        )
 
     return table
 
@@ -172,13 +174,15 @@ def compute_coefficient_summary(model_result: GLMResult) -> list[dict]:
     for i, name in enumerate(coef_names):
         if i < len(summary):
             row = summary.iloc[i]
-            coefficients.append({
-                "feature": name,
-                "coefficient": round(float(row["Coef."]), 6),
-                "std_error": round(float(row["Std.Err."]), 6),
-                "z_value": round(float(row["z"]), 4),
-                "p_value": round(float(row["P>|z|"]), 6),
-            })
+            coefficients.append(
+                {
+                    "feature": name,
+                    "coefficient": round(float(row["Coef."]), 6),
+                    "std_error": round(float(row["Std.Err."]), 6),
+                    "z_value": round(float(row["z"]), 4),
+                    "p_value": round(float(row["P>|z|"]), 6),
+                }
+            )
 
     # Sort by absolute coefficient value descending
     coefficients.sort(key=lambda x: abs(x["coefficient"]), reverse=True)

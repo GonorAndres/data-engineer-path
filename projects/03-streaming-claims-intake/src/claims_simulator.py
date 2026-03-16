@@ -189,9 +189,7 @@ def publish_events(
         if len(futures) >= batch_size:
             _flush_futures(futures)
             futures = []
-            logger.info(
-                "Flushed batch -- published %d events so far", counts["total"]
-            )
+            logger.info("Flushed batch -- published %d events so far", counts["total"])
 
         if interval > 0.001:  # skip sleep for very high rates
             time.sleep(interval)

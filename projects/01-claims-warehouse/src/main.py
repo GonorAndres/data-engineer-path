@@ -31,30 +31,42 @@ DB_PATH = PROJECT_ROOT / "data" / "claims_warehouse.duckdb"
 
 # SQL execution order -- each layer depends on the previous.
 SQL_LAYERS = [
-    ("staging", [
-        "stg_policyholders.sql",
-        "stg_policies.sql",
-        "stg_claims.sql",
-        "stg_claim_payments.sql",
-        "stg_coverages.sql",
-    ]),
-    ("intermediate", [
-        "int_claims_enriched.sql",
-        "int_claim_payments_cumulative.sql",
-        "int_policy_exposure.sql",
-    ]),
-    ("marts", [
-        "dim_date.sql",
-        "dim_policyholder.sql",
-        "dim_policy.sql",
-        "dim_coverage.sql",
-        "fct_claims.sql",
-        "fct_claim_payments.sql",
-    ]),
-    ("reports", [
-        "rpt_loss_triangle.sql",
-        "rpt_claim_frequency.sql",
-    ]),
+    (
+        "staging",
+        [
+            "stg_policyholders.sql",
+            "stg_policies.sql",
+            "stg_claims.sql",
+            "stg_claim_payments.sql",
+            "stg_coverages.sql",
+        ],
+    ),
+    (
+        "intermediate",
+        [
+            "int_claims_enriched.sql",
+            "int_claim_payments_cumulative.sql",
+            "int_policy_exposure.sql",
+        ],
+    ),
+    (
+        "marts",
+        [
+            "dim_date.sql",
+            "dim_policyholder.sql",
+            "dim_policy.sql",
+            "dim_coverage.sql",
+            "fct_claims.sql",
+            "fct_claim_payments.sql",
+        ],
+    ),
+    (
+        "reports",
+        [
+            "rpt_loss_triangle.sql",
+            "rpt_claim_frequency.sql",
+        ],
+    ),
 ]
 
 # Raw CSV files and the DuckDB table names they map to.
@@ -98,10 +110,7 @@ def load_raw_tables(
         filepath = DATA_DIR / f"{base_name}.{ext}"
         if not filepath.exists():
             raise FileNotFoundError(f"Missing data file: {filepath}")
-        con.execute(
-            f"CREATE OR REPLACE TABLE {table_name} AS "
-            f"SELECT * FROM {reader}('{filepath}')"
-        )
+        con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM {reader}('{filepath}')")
         count = con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"  {table_name:<25s} {count:>6,d} rows")
 
@@ -186,8 +195,7 @@ def print_summary(con: duckdb.DuckDBPyConnection) -> None:
         ORDER BY coverage_type
     """).fetchall()
     print(
-        f"{'Coverage':>12s} {'Claims':>8s} {'Exposure':>10s}"
-        f" {'Frequency':>10s} {'Pure Prem':>12s}"
+        f"{'Coverage':>12s} {'Claims':>8s} {'Exposure':>10s} {'Frequency':>10s} {'Pure Prem':>12s}"
     )
     for row in freq:
         print(f"{row[0]:>12s} {row[1]:>8,d} {row[2]:>10,.1f} {row[3]:>10.4f} {row[4]:>12,.2f}")
@@ -197,9 +205,14 @@ def export_tables(con: duckdb.DuckDBPyConnection, export_dir: str) -> None:
     """Export mart and report tables to CSV."""
     os.makedirs(export_dir, exist_ok=True)
     tables_to_export = [
-        "dim_date", "dim_policyholder", "dim_policy", "dim_coverage",
-        "fct_claims", "fct_claim_payments",
-        "rpt_loss_triangle", "rpt_claim_frequency",
+        "dim_date",
+        "dim_policyholder",
+        "dim_policy",
+        "dim_coverage",
+        "fct_claims",
+        "fct_claim_payments",
+        "rpt_loss_triangle",
+        "rpt_claim_frequency",
     ]
     print(f"\n--- Exporting to {export_dir} ---")
     for table in tables_to_export:
