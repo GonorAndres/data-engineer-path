@@ -13,8 +13,8 @@ from __future__ import annotations
 import logging
 
 import apache_beam as beam
-from apache_beam.transforms.userstate import BagStateSpec
 from apache_beam.coders import StrUtf8Coder
+from apache_beam.transforms.userstate import BagStateSpec
 
 logger = logging.getLogger(__name__)
 
