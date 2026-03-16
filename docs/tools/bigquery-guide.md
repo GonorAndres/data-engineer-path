@@ -5,7 +5,7 @@ tags:
   - data-warehouse
   - sql
   - tools
-status: draft
+status: complete
 created: 2026-02-21
 updated: 2026-02-21
 ---

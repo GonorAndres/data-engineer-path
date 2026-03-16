@@ -161,7 +161,10 @@ def print_summary(con: duckdb.DuckDBPyConnection) -> None:
         ORDER BY accident_year
     """).fetchall()
 
-    header = f"{'AY':>6s} {'Dev 0':>14s} {'Dev 1':>14s} {'Dev 2':>14s} {'Dev 3':>14s} {'Dev 4':>14s} {'Dev 5':>14s} {'Claims':>8s}"
+    header = (
+        f"{'AY':>6s} {'Dev 0':>14s} {'Dev 1':>14s} {'Dev 2':>14s}"
+        f" {'Dev 3':>14s} {'Dev 4':>14s} {'Dev 5':>14s} {'Claims':>8s}"
+    )
     print(header)
     print("-" * len(header))
     for row in triangle:
@@ -175,13 +178,17 @@ def print_summary(con: duckdb.DuckDBPyConnection) -> None:
             coverage_type,
             SUM(claim_count) AS claims,
             ROUND(SUM(exposure_years), 1) AS exposure_yrs,
-            ROUND(CAST(SUM(claim_count) AS DOUBLE) / NULLIF(SUM(exposure_years), 0), 4) AS frequency,
+            ROUND(CAST(SUM(claim_count) AS DOUBLE)
+                / NULLIF(SUM(exposure_years), 0), 4) AS frequency,
             ROUND(SUM(total_incurred) / NULLIF(SUM(exposure_years), 0), 2) AS pure_premium
         FROM rpt_claim_frequency
         GROUP BY coverage_type
         ORDER BY coverage_type
     """).fetchall()
-    print(f"{'Coverage':>12s} {'Claims':>8s} {'Exposure':>10s} {'Frequency':>10s} {'Pure Prem':>12s}")
+    print(
+        f"{'Coverage':>12s} {'Claims':>8s} {'Exposure':>10s}"
+        f" {'Frequency':>10s} {'Pure Prem':>12s}"
+    )
     for row in freq:
         print(f"{row[0]:>12s} {row[1]:>8,d} {row[2]:>10,.1f} {row[3]:>10.4f} {row[4]:>12,.2f}")
 

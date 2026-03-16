@@ -43,12 +43,12 @@ CI/CD: GitHub Actions workflow covers projects 01, 02, 03, 05, 06 + Terraform fm
 
 ## 3. CI/CD & Quality
 
-- [ ] [M] Fix/validate GitHub Actions workflow runs green (push and verify)
+- [x] [M] Fix GitHub Actions lint errors (3 E501 line-length in P01 main.py) (2026-03-16)
 
 ## 4. Knowledge Base -- Docs
 
 ### Existing docs -- promote to complete
-- [ ] [S] Review and promote 6 GCP tool guides (bigquery, cloud-composer, dataflow, dataform, gcs-as-data-lake, pubsub) -- add `status: complete` frontmatter
+- [x] [S] Promote 6 GCP tool guides to status: complete (2026-03-16)
 
 ## 5. Visualization & Presentation
 
