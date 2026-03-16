@@ -20,7 +20,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -222,7 +221,7 @@ def run_pipeline(
 
     # Step 3: Build training set
     print("\n=== Building Training Set ===")
-    split_counts = build_training_set(con, SQL_DIR)
+    build_training_set(con, SQL_DIR)
 
     # Step 4: Train model
     print(f"\n=== Training {target.replace('_', ' ').title()} Model ===")

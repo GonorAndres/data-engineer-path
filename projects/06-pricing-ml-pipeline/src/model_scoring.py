@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
-
 import duckdb
 
 from feature_engineering import get_training_data

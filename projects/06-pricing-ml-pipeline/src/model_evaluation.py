@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import duckdb
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-
-import duckdb
 
 from model_training import GLMResult
 

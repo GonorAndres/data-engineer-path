@@ -9,10 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+import duckdb
 import numpy as np
 import statsmodels.api as sm
-
-import duckdb
 
 
 @dataclass
