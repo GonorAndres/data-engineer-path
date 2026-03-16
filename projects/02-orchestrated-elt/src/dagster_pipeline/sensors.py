@@ -7,8 +7,6 @@ detected, the sensor emits a ``RunRequest`` that materializes the full
 asset graph.
 """
 
-import os
-from pathlib import Path
 from typing import Optional
 
 from dagster import (

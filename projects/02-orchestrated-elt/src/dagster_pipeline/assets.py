@@ -12,7 +12,7 @@ lineage and observability out of the box.
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from dagster import (
     AssetExecutionContext,
