@@ -229,7 +229,8 @@ def run(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--input_table",
         default="",
-        help="BigQuery input table (project:dataset.table). Default: PROJECT:claims_raw.streaming_claims",
+        help="BigQuery input table (project:dataset.table). "
+        "Default: PROJECT:claims_raw.streaming_claims",
     )
     parser.add_argument(
         "--output_table",

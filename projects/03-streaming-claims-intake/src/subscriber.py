@@ -24,7 +24,7 @@ import sys
 from datetime import date, datetime, timezone
 from typing import Any
 
-from flask import Flask, Request, jsonify, request
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
