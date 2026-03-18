@@ -301,8 +301,10 @@ class ClaimsDataGenerator:
                     "date_of_birth": dob.isoformat(),
                     "gender": gender,
                     "state_code": self._weighted_state(),
-                    "city": self.fake.city(),
-                    "occupation": self.rng.choice(OCCUPATIONS),
+                    "city": self.fake.city() if self.rng.random() > 0.07 else None,
+                    "occupation": (
+                        self.rng.choice(OCCUPATIONS) if self.rng.random() > 0.12 else None
+                    ),
                     "registration_date": registration_date.isoformat(),
                 }
             )
@@ -545,7 +547,11 @@ class ClaimsDataGenerator:
                         "report_date": report_date.isoformat(),
                         "close_date": close_date,
                         "claim_status": claim_status,
-                        "cause_of_loss": str(self.rng.choice(CAUSE_OF_LOSS[coverage])),
+                        "cause_of_loss": (
+                            str(self.rng.choice(CAUSE_OF_LOSS[coverage]))
+                            if self.rng.random() > 0.04
+                            else None
+                        ),
                         "initial_reserve": initial_reserve,
                         "current_reserve": self._round_mxn(current_reserve),
                         # Stash for payment generation (not written to CSV).
@@ -553,6 +559,16 @@ class ClaimsDataGenerator:
                         "_coverage_type": coverage,
                     }
                 )
+
+        # Inject ~1% duplicate claim_ids to simulate real-world data quality issues.
+        n_dupes = max(1, int(len(claims) * 0.01))
+        if claims:
+            dupe_indices = self.rng.choice(len(claims), size=n_dupes, replace=False)
+            for idx in dupe_indices:
+                dupe = dict(claims[idx])
+                orig_report = date.fromisoformat(dupe["report_date"])
+                dupe["report_date"] = (orig_report + timedelta(days=1)).isoformat()
+                claims.append(dupe)
 
         return claims
 
