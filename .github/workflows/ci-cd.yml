@@ -103,7 +103,6 @@ jobs:
         run: |
           cd projects/04-data-platform-terraform
           terraform fmt -check -recursive
-        continue-on-error: true  # Warn if not formatted
 
   # ===========================================================================
   # Job 2: Test

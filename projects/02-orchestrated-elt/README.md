@@ -1,6 +1,6 @@
 ---
 tags: [project, portfolio, orchestration, dagster, airflow, cloud-run, elt]
-status: draft
+status: complete
 created: 2026-03-14
 updated: 2026-03-14
 ---

@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import apache_beam as beam
+from apache_beam.utils.windowed_value import PaneInfoTiming
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +45,12 @@ _VALID_COVERAGE_TYPES = {
 # Map Beam PaneInfo timing constants to readable strings
 def _pane_timing_str(timing) -> str:
     """Convert Beam PaneInfoTiming to a human-readable string."""
-    # PaneInfo.timing is an int: 0=EARLY, 1=ON_TIME, 2=LATE, 3=UNKNOWN
-    timing_map = {0: "EARLY", 1: "ON_TIME", 2: "LATE", 3: "UNKNOWN"}
+    timing_map = {
+        PaneInfoTiming.EARLY: "EARLY",
+        PaneInfoTiming.ON_TIME: "ON_TIME",
+        PaneInfoTiming.LATE: "LATE",
+        PaneInfoTiming.UNKNOWN: "UNKNOWN",
+    }
     return timing_map.get(timing, "UNKNOWN")
 
 
@@ -127,7 +132,7 @@ class ParseAndValidateClaim(beam.DoFn):
                     )
                     return
 
-            # Validate coverage_type is not empty
+            # Validate coverage_type is not empty and is a known type
             coverage = record.get("coverage_type", "")
             if not coverage or not coverage.strip():
                 yield beam.pvalue.TaggedOutput(
@@ -135,6 +140,18 @@ class ParseAndValidateClaim(beam.DoFn):
                     {
                         "raw_data": raw_str[:2000],
                         "error_reason": "Empty coverage_type",
+                        "error_type": "validate",
+                        "processing_timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                )
+                return
+
+            if coverage not in _VALID_COVERAGE_TYPES:
+                yield beam.pvalue.TaggedOutput(
+                    self.DEAD_LETTER_TAG,
+                    {
+                        "raw_data": raw_str[:2000],
+                        "error_reason": f"Unknown coverage_type: {coverage}",
                         "error_type": "validate",
                         "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                     },
@@ -262,8 +279,7 @@ class RouteLateData(beam.DoFn):
         timestamp=beam.DoFn.TimestampParam,
         pane_info=beam.DoFn.PaneInfoParam,
     ):
-        # PaneInfo timing 2 = LATE
-        if pane_info.timing == 2:
+        if pane_info.timing == PaneInfoTiming.LATE:
             now = datetime.now(timezone.utc)
             event_ts = datetime.fromtimestamp(timestamp.micros / 1e6, tz=timezone.utc)
             lateness = int((now - event_ts).total_seconds())

@@ -1,6 +1,6 @@
 ---
 tags: [project, portfolio, terraform, iac, gcp, ci-cd]
-status: draft
+status: complete
 created: 2026-02-21
 updated: 2026-03-14
 ---

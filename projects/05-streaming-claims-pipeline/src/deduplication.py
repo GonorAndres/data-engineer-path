@@ -19,22 +19,6 @@ from apache_beam.transforms.userstate import BagStateSpec
 logger = logging.getLogger(__name__)
 
 
-def generate_dedup_key(claim: dict, window_start_epoch: float) -> str:
-    """Generate a deduplication key for a claim within a window.
-
-    Format: "{claim_id}:{window_start_epoch}"
-
-    Args:
-        claim: The claim dictionary (must have 'claim_id').
-        window_start_epoch: The window start as a Unix epoch float.
-
-    Returns:
-        A string key unique per claim per window.
-    """
-    claim_id = claim.get("claim_id", "unknown")
-    return f"{claim_id}:{int(window_start_epoch)}"
-
-
 class DeduplicateClaims(beam.DoFn):
     """Remove duplicate claim_ids within the same window using BagState.
 

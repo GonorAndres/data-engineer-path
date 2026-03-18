@@ -6,7 +6,7 @@ tags:
   - dataflow
   - beam
   - pubsub
-status: draft
+status: local-validated
 created: 2026-03-15
 updated: 2026-03-15
 ---
@@ -160,9 +160,14 @@ gcloud dataflow flex-template run "streaming-claims-$(date +%Y%m%d)" \
 
 ## Deployment
 
-**Status**: Local only (DirectRunner). Not deployed to Dataflow -- streaming jobs cost ~$50-100/day.
-**Would Deploy As**: Dataflow Flex Template (see flex_template/ directory)
-**Why Not Deployed**: A streaming Dataflow job runs 24/7 with minimum 1 worker. At ~$2-4/hour, this would cost $50-100/day for a portfolio project. The pipeline code is Dataflow-ready (same Beam SDK), and the Flex Template definition exists for production deployment.
+**Status**: Validated against real GCP infrastructure (DirectRunner + BigQuery + Pub/Sub).
+
+- **BigQuery output**: `dev_claims_analytics.streaming_hourly_summary` (4 coverage types, windowed aggregations with pane timing)
+- **Pub/Sub source**: `claims-events` topic with 60 synthetic claim events (10% late, 15% out-of-order)
+- **Pipeline output**: Windowed summaries with `ON_TIME` pane timing, firing IDs, coverage-level aggregations in MXN
+- **Flex Template**: Defined in `flex_template/` for Dataflow deployment
+
+**Why not 24/7 Dataflow**: A streaming Dataflow job runs continuously with minimum 1 worker at ~$2-4/hour ($50-100/day). The pipeline code is Dataflow-ready (same Beam SDK, same transforms), and the Flex Template exists for production deployment. The DirectRunner validation against real BigQuery and Pub/Sub proves the pipeline works end-to-end; 24/7 streaming is a cost decision, not a technical limitation.
 
 ## What I Would Change
 

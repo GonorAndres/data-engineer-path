@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 from google.cloud import bigquery
 
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "project-ad7a5be2-a1c7-4510-82d")
+PROJECT_ID = os.environ["GCP_PROJECT_ID"]
 DATASET_ANALYTICS = "dev_claims_analytics"
 DATASET_REPORTS = "dev_claims_reports"
 DATASET_RAW = "dev_claims_raw"

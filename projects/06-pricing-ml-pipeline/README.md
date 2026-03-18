@@ -1,6 +1,6 @@
 ---
 tags: [project, portfolio, ml-pipeline, pricing, glm, actuarial, duckdb]
-status: draft
+status: local-validated
 created: 2026-03-15
 updated: 2026-03-15
 ---
@@ -237,9 +237,17 @@ For production deployment on GCP:
 
 ## Deployment
 
-**Status**: Local only (DuckDB). Designed for BigQuery ML deployment.
-**Would Deploy As**: BigQuery ML with Dataform/SQL transforms
-**Why Not Deployed**: The feature engineering SQL is DuckDB-compatible and portable to BigQuery with minimal changes. For production, the `CREATE MODEL` step would use BigQuery ML's `LINEAR_REG` with Tweedie loss function, and features would be refreshed via Dataform or scheduled queries.
+**Status**: Deployed to BigQuery ML (dev environment).
+
+- **BigQuery Dataset**: `dev_pricing_ml` (us-central1)
+- **BQML Model**: `tweedie_pricing_model` (LINEAR_REGRESSION with L2 regularization)
+- **Tables deployed**: `feat_policy_experience`, `feat_risk_segments`, `feat_historical_benchmarks`, `model_training_set`, `model_predictions`, `model_scoring`
+- **Model metrics**: R-squared = 0.81, explained variance = 0.83, MAE = 22,006 MXN
+- **Monthly cost**: <$1 (BigQuery on-demand, free tier covers query volume)
+
+All 6 feature SQL files from the DuckDB pipeline ran on BigQuery with only two dialect changes: `CAST(... AS DOUBLE)` became `CAST(... AS FLOAT64)`, and `DATE '2025-12-31' - date_col` became `DATE_DIFF()`. The SQL portability claim is verified.
+
+**What broke during deployment**: BigQuery ML's `LINEAR_REG` does not support Tweedie loss directly (unlike the local `statsmodels.GLM`). Used standard linear regression with L2 regularization as the BQML equivalent. For full Tweedie support in production, `CREATE MODEL` with `BOOSTED_TREE_REGRESSOR` and `TWEEDIE_LOSS` would be the BQML path.
 
 ## What I Would Change
 
