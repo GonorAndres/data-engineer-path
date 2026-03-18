@@ -242,7 +242,7 @@ gcloud run deploy dev-claims-elt-pipeline \
 
 ## Decisions & Trade-offs
 
-| Decision | Chosen | Alternatives Considered | Why |
+| What | Picked | Also Looked At | Rationale |
 |----------|--------|------------------------|-----|
 | Local orchestrator | Dagster | Airflow, Prefect, Mage | Software-defined assets match ELT mental model; free local UI; type-safe definitions |
 | Cloud orchestrator | Cloud Scheduler + Cloud Run | Cloud Composer ($400+/mo), self-managed Airflow ($30+/mo), Cloud Workflows | Linear DAG with no fan-out -- Scheduler+Run costs $0.10/mo and handles the use case |
@@ -293,7 +293,6 @@ This DAG exists to show interviewers that the author understands Airflow deeply,
 - **Add retry logic to Cloud Run entrypoint** -- current handler has no retry on transient BigQuery errors; exponential backoff would improve reliability
 - **Test the Airflow DAG beyond syntax** -- DAG is only syntax-parsed; should have import tests and mock operator tests to prove it works
 - **Add pipeline metrics** -- no custom metrics emitted; Cloud Monitoring custom metrics (rows processed, duration, errors) would enable dashboarding
-- **Consider Dagster Cloud** -- Dagster+ (cloud-hosted) would eliminate the local-vs-cloud orchestrator split for teams that can afford it
 
 ## Related Docs
 

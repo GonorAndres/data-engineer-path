@@ -165,15 +165,13 @@ python scripts/deploy_dataform.py --project PROJECT_ID --env dev --region us-cen
 
 ## Decisions & Trade-offs
 
-| Decision | Chosen | Alternatives Considered | Why |
-|----------|--------|------------------------|-----|
-| Local warehouse engine | DuckDB | SQLite, Postgres, pandas | Zero config, SQL-compatible with BigQuery, in-process (no server), reads/writes Parquet natively |
-| Cloud warehouse | BigQuery + Dataform | Snowflake + dbt, Redshift | GCP-native, serverless pricing matches low-volume claims data, Dataform is free |
-| Data generation | Faker (es_MX) + NumPy distributions | Static CSV fixtures, Mockaroo | Actuarial distributions (Poisson frequency, LogNormal severity) create realistic loss patterns; es_MX for Mexican context |
-| Transform layering | raw > stg > int > marts > reports | Single-pass transforms, views-only | Enables debugging at each layer, staging isolates type casting, marts are reusable across reports |
-| Schema design | Star schema (4 dims + 2 facts) | OBT (One Big Table), Data Vault | Star schema balances query performance with modeling clarity; actuarial reports need dimensional slicing |
-| Export format | CSV via DuckDB COPY | Parquet, JSON | Simplest format for BigQuery load; Parquet would be better at scale but CSV is debuggable |
-| IBNR handling | Drop unreported claims | Estimate IBNR with chain-ladder | Dropping is honest about data completeness; estimation belongs in actuarial analysis, not the warehouse |
+I started with DuckDB for the local warehouse because I wanted something that just works: no server, no config, and the SQL dialect is close enough to BigQuery that the transforms port over with minimal changes. SQLite was tempting but its SQL support felt too limited for window functions and CTEs. Postgres would have worked but felt heavy for a single-user learning project.
+
+The biggest choice was the layered transform approach (raw, staging, intermediate, marts, reports) instead of writing one big query. This felt like overkill for 5 source tables, but it paid off immediately when I started debugging: I could query stg_claims directly to verify type casts before the intermediate joins touched it. The star schema (4 dims + 2 facts) came from reading Kimball. An OBT would have been simpler, but I specifically wanted to practice dimensional modeling for interviews.
+
+For data generation, I used Faker with es_MX locale and NumPy for the actuarial distributions (Poisson frequency, LogNormal severity). Static CSV fixtures would have been easier but I needed the development patterns and IBNR behavior to be realistic enough for the loss triangle to look right.
+
+Export format was CSV, which was the wrong call for anything at scale. Parquet preserves types and compresses well. But CSV was debuggable with `head -5` and loaded into BigQuery without fuss at this volume.
 
 ## Project Structure
 
@@ -228,8 +226,12 @@ All data uses Mexican context: es_MX names, Mexican state codes, MXN currency.
 - **Parquet over CSV for exports** -- CSV was fine for small samples but Parquet would preserve types, compress better, and load faster into BigQuery
 - **Add data quality checks (Great Expectations or custom)** -- currently no validation between layers; a staging-to-intermediate quality gate would catch schema drift
 - **Parameterize valuation date** -- hardcoded valuation date limits reusability; should be a CLI argument
-- **Add incremental load pattern** -- current pipeline truncates and reloads; a merge/upsert pattern would be more production-realistic
-- **Use polars instead of DuckDB SQL for transforms** -- DuckDB SQL was the right choice for BigQuery portability, but polars would make the Python pipeline more testable
+
+## Mistakes I Made
+
+- I spent two days trying to get Dataform's `defaultLocation` to match BigQuery's dataset region before realizing they were different concepts (multi-region vs regional). The error message was just a 400 with no detail. Had to read the Dataform source to figure it out.
+- My first version of the data generator produced claims with uniform severity, which made the loss triangle completely flat. The whole point of development patterns is that different coverage types develop at different speeds. Had to go back and implement per-coverage LogNormal parameters.
+- I forgot that `bq load --autodetect` on a 6-row CSV (coverages.csv) treats the header as data. Lost 30 minutes before adding an explicit schema.
 
 ## Related Docs
 

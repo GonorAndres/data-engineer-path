@@ -219,6 +219,14 @@ python src/beam_pipeline.py \
 - **Add backpressure handling** -- Cloud Run subscriber accepts all messages; should implement flow control for burst scenarios
 - **Use Dataflow templates** -- current Beam pipeline requires rebuilding; Flex Templates would allow parameterized, reusable pipeline runs
 - **Add end-to-end integration test** -- unit tests cover each component; no test publishes to emulator and verifies BigQuery output
+- **DLQ replay mechanism**: Right now messages go to the dead-letter topic and stay there. Should have a Cloud Function or script that retries messages after fixing the validation issue.
+- **Per-coverage latency tracking**: The current setup has no visibility into how long it takes from accident to BigQuery row by coverage type. A simple timestamp diff in the subscriber would show this.
+
+## Mistakes I Made
+
+- Assumed Pub/Sub push subscriptions send authenticated requests by default. They do not. Cloud Run returned 401 on every push until I added `--push-auth-service-account` to the subscription. The Pub/Sub docs mention this but I skimmed past it.
+- The Flask subscriber initially blocked on BigQuery streaming inserts, which caused Pub/Sub to timeout and redeliver the same message. Had to add async acknowledgment and a local buffer.
+- First time deploying, I realized P03 had no Dockerfile. Cloud Run needs one. Built it on the spot with Flask + gunicorn, which actually worked on the first try.
 
 ## Builds On
 
