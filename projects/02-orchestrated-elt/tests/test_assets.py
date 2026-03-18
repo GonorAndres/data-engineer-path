@@ -62,19 +62,19 @@ def _ensure_sample_data() -> None:
 class TestRawDataAsset:
     """Tests for the raw_data asset."""
 
-    def test_raw_data_materializes(self) -> None:
+    def test_raw_data_materializes(self, tmp_path) -> None:
         """raw_data should materialize successfully."""
         result = materialize(
             assets=[raw_data],
-            resources={"duckdb_resource": DuckDBResource(db_path=":memory:")},
+            resources={"duckdb_resource": DuckDBResource(db_path=str(tmp_path / "test_claims.duckdb"))},
         )
         assert result.success
 
-    def test_raw_data_metadata_includes_generated_flag(self) -> None:
+    def test_raw_data_metadata_includes_generated_flag(self, tmp_path) -> None:
         """raw_data metadata should indicate whether data was generated."""
         result = materialize(
             assets=[raw_data],
-            resources={"duckdb_resource": DuckDBResource(db_path=":memory:")},
+            resources={"duckdb_resource": DuckDBResource(db_path=str(tmp_path / "test_claims.duckdb"))},
         )
         assert result.success
         events = result.get_asset_materialization_events()
@@ -86,19 +86,19 @@ class TestRawDataAsset:
 class TestStagingLayerAsset:
     """Tests for the staging_layer asset."""
 
-    def test_staging_materializes(self) -> None:
+    def test_staging_materializes(self, tmp_path) -> None:
         """staging_layer should materialize successfully."""
         result = materialize(
             assets=[raw_data, staging_layer],
-            resources={"duckdb_resource": DuckDBResource(db_path=":memory:")},
+            resources={"duckdb_resource": DuckDBResource(db_path=str(tmp_path / "test_claims.duckdb"))},
         )
         assert result.success
 
-    def test_staging_metadata_has_row_counts(self) -> None:
+    def test_staging_metadata_has_row_counts(self, tmp_path) -> None:
         """staging_layer metadata should include per-table row counts."""
         result = materialize(
             assets=[raw_data, staging_layer],
-            resources={"duckdb_resource": DuckDBResource(db_path=":memory:")},
+            resources={"duckdb_resource": DuckDBResource(db_path=str(tmp_path / "test_claims.duckdb"))},
         )
         events = [
             e
@@ -118,7 +118,7 @@ class TestStagingLayerAsset:
 class TestFullAssetGraph:
     """Test materializing the complete asset graph."""
 
-    def test_all_layers_materialize(self) -> None:
+    def test_all_layers_materialize(self, tmp_path) -> None:
         """All five assets should materialize end-to-end."""
         result = materialize(
             assets=[
@@ -128,7 +128,7 @@ class TestFullAssetGraph:
                 marts_layer,
                 reports_layer,
             ],
-            resources={"duckdb_resource": DuckDBResource(db_path=":memory:")},
+            resources={"duckdb_resource": DuckDBResource(db_path=str(tmp_path / "test_claims.duckdb"))},
         )
         assert result.success
         events = result.get_asset_materialization_events()

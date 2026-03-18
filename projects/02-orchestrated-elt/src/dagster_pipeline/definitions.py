@@ -50,7 +50,7 @@ defs = Definitions(
         reports_layer,
     ],
     resources={
-        "duckdb_resource": DuckDBResource(db_path=":memory:"),
+        "duckdb_resource": DuckDBResource(db_path="/tmp/claims_warehouse.duckdb"),
     },
     schedules=[daily_pipeline_schedule],
     sensors=[new_data_sensor],
