@@ -166,13 +166,28 @@ def get_training_data(
     numeric_df = df.select(numeric_cols)
     feature_df = pl.concat([numeric_df] + dummies_frames, how="horizontal")
 
-    # Extract target
+    # Extract target and drop rows with unknown claim cost
     y = df["target_pure_premium"].to_numpy().astype(np.float64)
+    valid_mask = ~np.isnan(y)
+    n_dropped = int((~valid_mask).sum())
+    if n_dropped > 0:
+        print(f"  Dropped {n_dropped} rows with NaN target_pure_premium ({split} split)")
+    y = y[valid_mask]
 
-    # Handle any nulls/NaN in features
+    # Build feature matrix, filter to same rows
     X = feature_df.to_numpy().astype(np.float64)
-    X = np.nan_to_num(X, nan=0.0)
-    y = np.nan_to_num(y, nan=0.0)
+    X = X[valid_mask]
+
+    # Column-median imputation for continuous features
+    n_numeric = len(numeric_cols)
+    for col_idx in range(n_numeric):
+        col = X[:, col_idx]
+        nan_mask = np.isnan(col)
+        if nan_mask.any():
+            X[nan_mask, col_idx] = np.nanmedian(col)
+
+    # For one-hot categoricals, NaN -> 0 is correct (means "not this category")
+    X[:, n_numeric:] = np.nan_to_num(X[:, n_numeric:], nan=0.0)
 
     feature_names = feature_df.columns
 
