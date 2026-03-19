@@ -191,7 +191,9 @@ def intermediate_layer(
     # Verify upstream tables exist in persistent DB
     for table in ["stg_claims", "stg_policies", "stg_policyholders"]:
         if runner.get_table_row_count(table) < 0:
-            raise RuntimeError(f"Upstream table '{table}' not found. Materialize staging_layer first.")
+            raise RuntimeError(
+                f"Upstream table '{table}' not found. Materialize staging_layer first."
+            )
 
     layer_result = runner.execute_sql_layer("intermediate")
     elapsed = round(time.monotonic() - start, 3)
@@ -236,9 +238,15 @@ def marts_layer(
     )
 
     # Verify upstream tables exist in persistent DB
-    for table in ["int_claims_enriched", "int_claim_payments_cumulative", "int_policy_exposure"]:
+    for table in [
+        "int_claims_enriched",
+        "int_claim_payments_cumulative",
+        "int_policy_exposure",
+    ]:
         if runner.get_table_row_count(table) < 0:
-            raise RuntimeError(f"Upstream table '{table}' not found. Materialize intermediate_layer first.")
+            raise RuntimeError(
+                f"Upstream table '{table}' not found. Materialize intermediate_layer first."
+            )
 
     layer_result = runner.execute_sql_layer("marts")
     elapsed = round(time.monotonic() - start, 3)
@@ -283,7 +291,9 @@ def reports_layer(
     # Verify upstream tables exist in persistent DB
     for table in ["fct_claims", "fct_claim_payments", "dim_date"]:
         if runner.get_table_row_count(table) < 0:
-            raise RuntimeError(f"Upstream table '{table}' not found. Materialize marts_layer first.")
+            raise RuntimeError(
+                f"Upstream table '{table}' not found. Materialize marts_layer first."
+            )
 
     layer_result = runner.execute_sql_layer("reports")
     elapsed = round(time.monotonic() - start, 3)
