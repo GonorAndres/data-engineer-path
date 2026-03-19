@@ -36,9 +36,9 @@ resource "google_storage_bucket" "data" {
   # Auto-delete objects under test/ after 30 days
   lifecycle_rule {
     condition {
-      age                   = 30
-      matches_prefix        = ["test/"]
-      with_state            = "ANY"
+      age            = 30
+      matches_prefix = ["test/"]
+      with_state     = "ANY"
     }
     action {
       type = "Delete"

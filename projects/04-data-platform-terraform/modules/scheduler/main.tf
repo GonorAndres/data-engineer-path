@@ -11,9 +11,9 @@
 # =============================================================================
 
 resource "google_cloud_scheduler_job" "pipeline_trigger" {
-  name     = "${var.env_prefix_hyphen}claims-pipeline-daily"
-  project  = var.project_id
-  region   = var.region
+  name    = "${var.env_prefix_hyphen}claims-pipeline-daily"
+  project = var.project_id
+  region  = var.region
 
   description = "Triggers the claims ELT pipeline daily at 06:00 UTC [${var.environment}]"
 
@@ -29,8 +29,8 @@ resource "google_cloud_scheduler_job" "pipeline_trigger" {
     retry_count          = 2
     min_backoff_duration = "300s" # 5 minutes
     max_backoff_duration = "300s" # 5 minutes (fixed interval)
-    max_retry_duration   = "0s"  # No overall retry deadline
-    max_doublings        = 0     # No exponential backoff (fixed 5-min interval)
+    max_retry_duration   = "0s"   # No overall retry deadline
+    max_doublings        = 0      # No exponential backoff (fixed 5-min interval)
   }
 
   # HTTP target: POST to Cloud Run pipeline service
