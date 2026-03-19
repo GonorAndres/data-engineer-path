@@ -99,6 +99,9 @@ jobs:
       - name: Check formatting
         run: ruff format --check projects/01-claims-warehouse/src/ projects/02-orchestrated-elt/src/ projects/03-streaming-claims-intake/src/ projects/05-streaming-claims-pipeline/src/ projects/06-pricing-ml-pipeline/src/
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
       - name: Validate Terraform (Project 04)
         run: |
           cd projects/04-data-platform-terraform
