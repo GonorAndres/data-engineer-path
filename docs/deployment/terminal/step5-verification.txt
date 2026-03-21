@@ -1,6 +1,6 @@
 == Step 5: End-to-End Verification ==
 Date: 2026-03-16
-Project: project-ad7a5be2-a1c7-4510-82d
+Project: your-gcp-project-id
 Region: us-central1
 
 == BigQuery Tables ==
@@ -43,11 +43,11 @@ Total: 22 tables across 5 datasets.
 == Cloud Run Services ==
 
 dev-claims-elt-pipeline:
-  URL: https://dev-claims-elt-pipeline-451451662791.us-central1.run.app
+  URL: https://dev-claims-elt-pipeline-YOUR-PROJECT-NUMBER.us-central1.run.app
   Status: Ready
 
 dev-claims-subscriber:
-  URL: https://dev-claims-subscriber-451451662791.us-central1.run.app
+  URL: https://dev-claims-subscriber-YOUR-PROJECT-NUMBER.us-central1.run.app
   Status: Ready
 
 == Streaming Verification ==

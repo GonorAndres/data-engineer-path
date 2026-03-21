@@ -52,3 +52,7 @@ subagents_outputs/
 
 # Personal reference docs (not part of the portfolio)
 PROJECT_WALKTHROUGH.md
+future_ideas.md
+
+# Tool artifacts
+.playwright-mcp/

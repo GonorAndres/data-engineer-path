@@ -1,13 +1,13 @@
 == Step 0: Pre-flight Checks ==
 Date: 2026-03-15
-Project: project-ad7a5be2-a1c7-4510-82d
+Project: your-gcp-project-id
 Region: us-central1
 
 == gcloud auth list ==
                   Credentialed Accounts
 ACTIVE  ACCOUNT
-        451451662791-compute@developer.gserviceaccount.com
-*       andtega349@gmail.com
+        PROJECT-NUMBER-compute@developer.gserviceaccount.com
+*       your-email@gmail.com
 
 == ADC ==
 Application Default Credentials: OK (token verified)

@@ -1,6 +1,6 @@
 == Scale Deployment ==
 Date: 2026-03-16
-Project: project-ad7a5be2-a1c7-4510-82d
+Project: your-gcp-project-id
 
 == P01: 100K Policyholders (Parquet) ==
 
