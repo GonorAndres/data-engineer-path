@@ -318,7 +318,7 @@ jobs:
             --timeout=900
             --max-instances=1
             --min-instances=0
-            --no-allow-unauthenticated
+            --allow-unauthenticated
 
       - name: Show deployment URL
         if: steps.deploy.outcome == 'success'
