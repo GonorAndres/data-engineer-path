@@ -5,7 +5,6 @@ Each transform is a single-responsibility DoFn:
 - EnrichClaim: add processing metadata
 - ExtractCoverageKey: key by coverage_type for GroupByKey
 - ComputeStreamingSummary: windowed aggregation with pane tracking
-- RouteLateData: split late-pane data for separate tracking
 
 Key difference from P03: these transforms are pane-aware. They track
 EARLY/ON_TIME/LATE firing metadata that P03's batch transforms ignore.
@@ -261,39 +260,3 @@ class ComputeStreamingSummary(beam.DoFn):
             "pane_timing": pane_timing,
             "firing_id": firing_id,
         }
-
-
-class RouteLateData(beam.DoFn):
-    """Route late-pane data to a separate output for tracking.
-
-    Checks pane_info.timing: if LATE (value 2), yields to the
-    'late_arrivals' tagged output with lateness metadata.
-    ON_TIME and EARLY data passes through the main output unchanged.
-    """
-
-    LATE_TAG = "late_arrivals"
-
-    def process(
-        self,
-        element,
-        timestamp=beam.DoFn.TimestampParam,
-        pane_info=beam.DoFn.PaneInfoParam,
-    ):
-        if pane_info.timing == PaneInfoTiming.LATE:
-            now = datetime.now(timezone.utc)
-            event_ts = datetime.fromtimestamp(timestamp.micros / 1e6, tz=timezone.utc)
-            lateness = int((now - event_ts).total_seconds())
-
-            yield beam.pvalue.TaggedOutput(
-                self.LATE_TAG,
-                {
-                    "claim_id": element.get("claim_id", "unknown"),
-                    "original_timestamp": event_ts.isoformat(),
-                    "arrival_timestamp": now.isoformat(),
-                    "lateness_seconds": max(lateness, 0),
-                    "raw_data": json.dumps(element)[:2000],
-                    "processing_timestamp": now.isoformat(),
-                },
-            )
-        else:
-            yield element

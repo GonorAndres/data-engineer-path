@@ -1,6 +1,6 @@
 ---
 tags: [project, portfolio, ml-pipeline, pricing, glm, actuarial, duckdb]
-status: local-validated
+status: deployed
 created: 2026-03-15
 updated: 2026-03-15
 ---
