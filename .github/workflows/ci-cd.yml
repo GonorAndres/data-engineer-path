@@ -48,7 +48,9 @@ env:
   # Shared environment variables across all jobs.
   PYTHON_VERSION: "3.12"
   GCP_REGION: us-central1
-  SERVICE_NAME: claims-elt-pipeline
+  # Matches the existing internal (IAM-auth) Cloud Run service in GCP.
+  # CLAUDE.md registry notes P02 is owner-only; keep the name stable here.
+  SERVICE_NAME: dev-claims-elt-pipeline
 
 jobs:
   # ===========================================================================
@@ -321,7 +323,7 @@ jobs:
             --timeout=900
             --max-instances=1
             --min-instances=0
-            --allow-unauthenticated
+            --no-allow-unauthenticated
 
       - name: Show deployment URL
         if: steps.deploy.outcome == 'success'
