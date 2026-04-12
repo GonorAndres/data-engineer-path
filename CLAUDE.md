@@ -65,7 +65,10 @@ These are the two surfaces used to share this portfolio externally (recruiters, 
 
 - **Branching**: long-lived `dev` integration branch. Feature branches merge into `dev` (lint + test only); `dev` promotes to `main` via PR (full pipeline: lint + test + build + deploy). Both branches are protected; `main` requires a PR plus green status checks, `dev` requires only status checks.
 - **GitHub Environment**: a single `production` environment holds the GCP WIF secrets (`GCP_WIF_PROVIDER`, `GCP_WIF_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`) used by both the `build` and `deploy` jobs in `.github/workflows/ci-cd.yml`. There is no separate dev environment -- P02/P03 already serve that role as owner-only internal services in GCP.
-- **Deploy target**: `SERVICE_NAME=dev-claims-elt-pipeline` with `--no-allow-unauthenticated`. CI updates the existing internal Cloud Run service in place and preserves IAM-auth visibility on every deploy. Full pipeline end-to-end verified 2026-04-12.
+- **Deploy targets**: two Cloud Run services managed by the same workflow.
+  - `dev-claims-elt-pipeline` (P02) with `--no-allow-unauthenticated` — rebuilt on every `main` push, preserves IAM-auth visibility.
+  - `claims-dashboard` (P01) with `--allow-unauthenticated` — path-filtered via `dorny/paths-filter@v3`, only rebuilt when `projects/01-claims-warehouse/dashboard/**` changes. Flags match the live service: `--memory=512Mi --cpu=1 --max-instances=2`.
+- Full pipeline end-to-end verified 2026-04-12.
 - **Scheduled health-check** at `.github/workflows/health-check.yml` pings Public-visibility URLs on a weekly cron and fails on non-200. Only URLs in this registry marked `Public` should be added to that workflow; `Internal` URLs are owner-only and not health-checked from CI.
 
 ## Conventions
