@@ -8,10 +8,7 @@ fails the page falls back to a horizontal bar chart.
 import plotly.express as px
 import streamlit as st
 
-from utils.analytics import inject_posthog
 from utils.bq_client import query_bq, DATASET_ANALYTICS
-
-inject_posthog()
 
 st.header("Geographic Risk Concentration")
 st.markdown(

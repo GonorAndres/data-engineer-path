@@ -10,6 +10,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN python scripts/patch_streamlit_index.py
+
 ENV PORT=8080 \
     PYTHONUNBUFFERED=1
 

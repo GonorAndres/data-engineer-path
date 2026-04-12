@@ -8,10 +8,7 @@ informational message instead of crashing.
 import plotly.express as px
 import streamlit as st
 
-from utils.analytics import inject_posthog
 from utils.bq_client import query_bq, DATASET_ANALYTICS
-
-inject_posthog()
 
 st.header("Pricing Adequacy")
 st.markdown(
