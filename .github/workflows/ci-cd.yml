@@ -447,6 +447,13 @@ jobs:
           service: ${{ env.DASHBOARD_SERVICE_NAME }}
           region: ${{ env.GCP_REGION }}
           image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/data-pipelines/${{ env.DASHBOARD_SERVICE_NAME }}:${{ github.sha }}
+          # Env vars the container requires at startup.  Injected on every
+          # deploy so a fresh revision never ships without them; a previous
+          # Cloud Run service had no env vars set and the dashboard crashed
+          # on bq_client import.  Keep this list as the single source of
+          # truth for runtime configuration.
+          env_vars: |
+            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
           flags: |
             --memory=512Mi
             --cpu=1

@@ -43,7 +43,7 @@ These are the two surfaces used to share this portfolio externally (recruiters, 
 
 | Ref | URL | Visibility | Project | Status |
 |-----|-----|------------|---------|--------|
-| Dashboard | https://claims-dashboard-451451662791.us-central1.run.app | Public | P01 Claims Warehouse | Live |
+| Dashboard | https://claims-dashboard-451451662791.us-central1.run.app | Public | P01 Claims Warehouse | Live (PostHog tracking active) |
 | ELT Pipeline | https://dev-claims-elt-pipeline-451451662791.us-central1.run.app | Internal (IAM-auth, owner-only) | P02 Orchestrated ELT | Live (internal) |
 | Subscriber | https://dev-claims-subscriber-451451662791.us-central1.run.app | Internal (IAM-auth, owner-only) | P03 Streaming Intake | Live (internal) |
 | CI/CD badge | https://github.com/GonorAndres/data-engineer-path/actions/workflows/ci-cd.yml | Public | All projects | Live |
@@ -68,7 +68,9 @@ These are the two surfaces used to share this portfolio externally (recruiters, 
 - **Deploy targets**: two Cloud Run services managed by the same workflow.
   - `dev-claims-elt-pipeline` (P02) with `--no-allow-unauthenticated` — rebuilt on every `main` push, preserves IAM-auth visibility.
   - `claims-dashboard` (P01) with `--allow-unauthenticated` — path-filtered via `dorny/paths-filter@v3`, only rebuilt when `projects/01-claims-warehouse/dashboard/**` changes. Flags match the live service: `--memory=512Mi --cpu=1 --max-instances=2`.
-- Full pipeline end-to-end verified 2026-04-12.
+- Full pipeline end-to-end verified 2026-04-12, including the auto-deploy path filter: a PR that does not touch `dashboard/**` correctly skips `build-dashboard` + `deploy-dashboard` while the ELT jobs still run.
+- **PostHog web analytics** is live on the dashboard. The snippet is baked into Streamlit's static `index.html` at Docker build time by `projects/01-claims-warehouse/dashboard/scripts/patch_streamlit_index.py` (runs inside the `Dockerfile`) -- `st.html` strips `<script>` tags and `st.components.v1.html` scopes to an iframe, neither works for exposing `window.posthog` on the parent page. Token is a public write-only key (`phc_...`), safe to commit; mirrors the `data-analyst-path` portfolio.
+- **Runtime env vars for Cloud Run services** are injected by the deploy jobs via the `env_vars:` input of `google-github-actions/deploy-cloudrun@v2`, not stored on the service. This is load-bearing: the dashboard previously shipped with zero env vars across 3 revisions and crashed at import on a missing `GCP_PROJECT_ID`. The workflow is now the single source of truth -- every new revision ships with the required vars. When adding a new runtime env var, add it to the relevant deploy job's `env_vars` block rather than running `gcloud run services update` manually.
 - **Scheduled health-check** at `.github/workflows/health-check.yml` pings Public-visibility URLs on a weekly cron and fails on non-200. Only URLs in this registry marked `Public` should be added to that workflow; `Internal` URLs are owner-only and not health-checked from CI.
 
 ## Conventions
