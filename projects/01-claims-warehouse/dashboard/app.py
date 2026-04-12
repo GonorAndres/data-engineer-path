@@ -7,12 +7,16 @@ risk concentration for a synthetic Mexican insurance portfolio.
 
 import streamlit as st
 
+from utils.analytics import inject_posthog
+
 st.set_page_config(
     page_title="Insurance Claims Analytics",
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+inject_posthog()
 
 # -- Sidebar ------------------------------------------------------------------
 st.sidebar.title("Claims Analytics")
