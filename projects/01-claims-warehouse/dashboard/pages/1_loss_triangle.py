@@ -10,10 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from utils.analytics import inject_posthog
 from utils.bq_client import query_bq, DATASET_REPORTS
-
-inject_posthog()
 
 st.header("Loss Development Triangle")
 st.markdown(

@@ -7,10 +7,7 @@ coverage type, and top-level KPI cards.
 import plotly.express as px
 import streamlit as st
 
-from utils.analytics import inject_posthog
 from utils.bq_client import query_bq, DATASET_REPORTS
-
-inject_posthog()
 
 st.header("Portfolio Health")
 st.markdown(
