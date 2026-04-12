@@ -24,9 +24,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
     inputs:
       deploy:
@@ -218,8 +218,11 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: [lint, test]
-    # Only build on pushes to main (not on PRs).
+    # Only build on pushes to main (not on PRs or pushes to dev).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Required so the GCP WIF secrets live in one place (the `production`
+    # environment) and both build and deploy read them consistently.
+    environment: production
 
     permissions:
       contents: read
