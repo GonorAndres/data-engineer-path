@@ -9,7 +9,7 @@ A comprehensive **Data Engineering knowledge base and portfolio repository** for
 - **Hands-on portfolio projects** using actuarial/insurance domain data plus public datasets
 - **Reusable tools and scripts** that grow in complexity as understanding deepens
 
-Primary tech focus: **GCP-native infrastructure** (BigQuery, Composer, Dataflow, Pub/Sub, GCS, Dataform), with thorough coverage of alternatives and when to choose what.
+Primary tech focus: **GCP-native infrastructure** (BigQuery, Cloud Run, Cloud Scheduler, Dataflow, Pub/Sub, GCS, Dataform), with thorough coverage of alternatives and when to choose what. Cloud Composer was intentionally rejected in favor of Cloud Run + Cloud Scheduler on cost grounds -- see P02 decision docs.
 
 ## Repository Structure
 
@@ -27,6 +27,44 @@ data-enginer/
 ├── scripts/                 # One-off helper scripts (setup, data download, etc.)
 └── subagents_outputs/       # Claude Code subagent working files (gitignored)
 ```
+
+## Live Deployments & Public Links
+
+This section is the **single source of truth** for all live URLs related to this repository. Update it whenever a service is deployed, torn down, or changes visibility.
+
+### Public narrative entry points
+
+These are the two surfaces used to share this portfolio externally (recruiters, peers, etc.):
+
+- **Blog walkthrough**: https://gonorandres.github.io/blog/data-engineering-platform/ -- decision-oriented narrative across all six projects
+- **GitHub repository**: https://github.com/GonorAndres/data-engineer-path -- code, docs, and CI badge
+
+### Deployment registry
+
+| Ref | URL | Visibility | Project | Status |
+|-----|-----|------------|---------|--------|
+| Dashboard | https://claims-dashboard-451451662791.us-central1.run.app | Public | P01 Claims Warehouse | Live |
+| ELT Pipeline | https://dev-claims-elt-pipeline-451451662791.us-central1.run.app | Internal (IAM-auth, owner-only) | P02 Orchestrated ELT | Live (internal) |
+| Subscriber | https://dev-claims-subscriber-451451662791.us-central1.run.app | Internal (IAM-auth, owner-only) | P03 Streaming Intake | Live (internal) |
+| CI/CD badge | https://github.com/GonorAndres/data-engineer-path/actions/workflows/ci-cd.yml | Public | All projects | Live |
+
+**Visibility key:**
+- `Public` -- unauthenticated, safe to share externally (blog, resume, interviews)
+- `Internal (IAM-auth, owner-only)` -- deployed to GCP and reachable only by the repo owner via IAM auth; not a transient state, do NOT share these URLs
+- `Private` -- not deployed / local only
+
+**Status key:** `Live`, `Live (internal)`, `Torn down`, `Not deployed`
+
+### Maintenance rules
+
+- Each `projects/<name>/README.md` **Deployment** section must list its own URL (if any), and that URL must match this registry.
+- When deploying, tearing down, or changing visibility of a service, update this table in the same commit.
+- Do not add links to private resources (Google Drive folders, personal docs, academic material) here -- this table is for repo-associated services only.
+
+### CI integration
+
+- **GitHub Environments** (`production`, `dev`) exist in repo settings. The deploy job in `.github/workflows/ci-cd.yml` targets `production`; `dev` is reserved for future internal-only deployments (e.g. a CI-driven P02/P03 deploy). Both environments are for owner use -- neither implies public access.
+- **Scheduled health-check** at `.github/workflows/health-check.yml` pings Public-visibility URLs on a weekly cron and fails on non-200. Only URLs in this registry marked `Public` should be added to that workflow; `Internal` URLs are owner-only and not health-checked from CI.
 
 ## Conventions
 

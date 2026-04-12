@@ -1,0 +1,36 @@
+# =============================================================================
+# Health Check -- Public Deployments
+# =============================================================================
+#
+# Pings public portfolio URLs on a schedule and fails if any return non-200.
+# Catches silent outages of portfolio-facing services (e.g. Cloud Run minimum
+# instances scaled to zero and the image was deleted, IAM drift, DNS issues).
+#
+# Registry of checked URLs lives in /CLAUDE.md under "Deployment registry".
+# Only URLs marked "Public (unauthenticated)" should be added here.
+#
+# =============================================================================
+
+name: Health Check
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC (03:00 CST). Weekly cadence is enough for a
+    # portfolio repo -- cron more frequently burns Actions minutes for no gain.
+    - cron: "0 9 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  check-public-urls:
+    name: Check public URLs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Claims Dashboard (P01)
+        run: |
+          URL="https://claims-dashboard-451451662791.us-central1.run.app"
+          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$URL")
+          echo "GET $URL -> $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error title=Dashboard down::$URL returned $STATUS (expected 200)"
+            exit 1
+          fi
