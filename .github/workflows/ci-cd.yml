@@ -51,8 +51,32 @@ env:
   # Matches the existing internal (IAM-auth) Cloud Run service in GCP.
   # CLAUDE.md registry notes P02 is owner-only; keep the name stable here.
   SERVICE_NAME: dev-claims-elt-pipeline
+  # Public Cloud Run service for the P01 Streamlit dashboard.
+  DASHBOARD_SERVICE_NAME: claims-dashboard
 
 jobs:
+  # ===========================================================================
+  # Job 0: Detect changed paths
+  # ===========================================================================
+  # Lets us skip the dashboard build+deploy when the PR/push does not touch
+  # the dashboard directory.  Saves ~4 minutes of CI time per unrelated change.
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            dashboard:
+              - 'projects/01-claims-warehouse/dashboard/**'
+
   # ===========================================================================
   # Job 1: Lint
   # ===========================================================================
@@ -330,3 +354,106 @@ jobs:
         run: |
           echo "Deployed to: ${{ steps.deploy.outputs.url }}"
           echo "Test health: curl -H 'Authorization: Bearer \$(gcloud auth print-identity-token)' ${{ steps.deploy.outputs.url }}/health"
+
+  # ===========================================================================
+  # Job 5: Build Dashboard Image (P01 Streamlit claims-dashboard)
+  # ===========================================================================
+  # Separate from the ELT build because the dashboard is its own Cloud Run
+  # service with a different Dockerfile, public visibility, and independent
+  # release cadence.  Path-filtered: only runs when the dashboard dir changes.
+  build-dashboard:
+    name: Build Dashboard Image
+    runs-on: ubuntu-latest
+    needs: [lint, test, changes]
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.dashboard == 'true'
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Dashboard Docker image
+        run: |
+          cd projects/01-claims-warehouse/dashboard
+          docker build \
+            --tag "${{ env.DASHBOARD_SERVICE_NAME }}:${{ github.sha }}" \
+            --tag "${{ env.DASHBOARD_SERVICE_NAME }}:latest" \
+            --label "git.sha=${{ github.sha }}" \
+            --label "git.ref=${{ github.ref }}" \
+            .
+
+      - name: Configure Docker for Artifact Registry
+        if: steps.auth.outcome == 'success'
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Push Dashboard image to Artifact Registry
+        if: steps.auth.outcome == 'success'
+        run: |
+          FULL_IMAGE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/data-pipelines/${{ env.DASHBOARD_SERVICE_NAME }}"
+          docker tag "${{ env.DASHBOARD_SERVICE_NAME }}:${{ github.sha }}" "${FULL_IMAGE}:${{ github.sha }}"
+          docker tag "${{ env.DASHBOARD_SERVICE_NAME }}:latest" "${FULL_IMAGE}:latest"
+          docker push "${FULL_IMAGE}:${{ github.sha }}"
+          docker push "${FULL_IMAGE}:latest"
+
+  # ===========================================================================
+  # Job 6: Deploy Dashboard to Cloud Run
+  # ===========================================================================
+  # Public service: --allow-unauthenticated.  Matches current live resource
+  # limits (memory=512Mi, cpu=1, maxScale=2) observed on the running service.
+  deploy-dashboard:
+    name: Deploy Dashboard to Cloud Run
+    runs-on: ubuntu-latest
+    needs: [build-dashboard]
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Deploy Dashboard to Cloud Run
+        id: deploy
+        if: steps.auth.outcome == 'success'
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.DASHBOARD_SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/data-pipelines/${{ env.DASHBOARD_SERVICE_NAME }}:${{ github.sha }}
+          flags: |
+            --memory=512Mi
+            --cpu=1
+            --max-instances=2
+            --min-instances=0
+            --allow-unauthenticated
+
+      - name: Show Dashboard deployment URL
+        if: steps.deploy.outcome == 'success'
+        run: echo "Dashboard deployed to ${{ steps.deploy.outputs.url }}"
