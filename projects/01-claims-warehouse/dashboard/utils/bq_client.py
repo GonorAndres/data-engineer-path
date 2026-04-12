@@ -11,7 +11,15 @@ import pandas as pd
 import streamlit as st
 from google.cloud import bigquery
 
-PROJECT_ID = os.environ["GCP_PROJECT_ID"]
+# Cloud Run sets GOOGLE_CLOUD_PROJECT automatically from the service's
+# project; GCP_PROJECT_ID is what CI injects explicitly.  Accept either so
+# a missed CI env-var injection does not take the dashboard down.
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
+if not PROJECT_ID:
+    raise RuntimeError(
+        "No GCP project configured: set GCP_PROJECT_ID (preferred) or "
+        "GOOGLE_CLOUD_PROJECT in the Cloud Run service environment."
+    )
 DATASET_ANALYTICS = "dev_claims_analytics"
 DATASET_REPORTS = "dev_claims_reports"
 DATASET_RAW = "dev_claims_raw"
