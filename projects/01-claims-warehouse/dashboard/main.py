@@ -1,0 +1,394 @@
+"""Insurance Claims Analytics Dashboard -- FastAPI application."""
+
+import asyncio
+import logging
+import math
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
+
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.gzip import GZipMiddleware
+
+from utils.bq_client import query_bq, DATASET_ANALYTICS, DATASET_REPORTS
+from utils.analytics import POSTHOG_SNIPPET
+
+log = logging.getLogger("dashboard")
+
+_WARM_QUERIES = [
+    f"SELECT COUNT(DISTINCT claim_id) AS c FROM `{DATASET_ANALYTICS}`.fct_claims",
+    f"SELECT * FROM `{DATASET_REPORTS}`.rpt_loss_triangle ORDER BY accident_year",
+    f"SELECT * FROM `{DATASET_REPORTS}`.rpt_claim_frequency ORDER BY year, coverage_type",
+    f"""SELECT p.state_code, c.accident_year, COUNT(c.claim_id) AS claim_count,
+        ROUND(AVG(c.total_paid),2) AS avg_severity, ROUND(SUM(c.total_paid),2) AS total_paid
+        FROM `{DATASET_ANALYTICS}`.fct_claims c
+        JOIN `{DATASET_ANALYTICS}`.dim_policyholder p ON c.policyholder_id=p.policyholder_id
+        GROUP BY p.state_code, c.accident_year ORDER BY p.state_code, c.accident_year""",
+]
+
+
+def _warm_cache():
+    for sql in _WARM_QUERIES:
+        try:
+            query_bq(sql)
+        except Exception as exc:
+            log.warning("Cache warm failed: %s", exc)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(ThreadPoolExecutor(1), _warm_cache)
+    yield
+
+
+app = FastAPI(title="Claims Analytics", docs_url=None, redoc_url=None, lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=500)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+STATE_NAMES = {
+    "AGU": "Aguascalientes", "BCN": "Baja California",
+    "BCS": "Baja California Sur", "CAM": "Campeche", "CHP": "Chiapas",
+    "CHH": "Chihuahua", "COA": "Coahuila", "COL": "Colima",
+    "CDMX": "Ciudad de México", "DUR": "Durango", "GUA": "Guanajuato",
+    "GRO": "Guerrero", "HID": "Hidalgo", "JAL": "Jalisco",
+    "MEX": "México", "MIC": "Michoacán", "MOR": "Morelos",
+    "NAY": "Nayarit", "NLE": "Nuevo León", "OAX": "Oaxaca",
+    "PUE": "Puebla", "QUE": "Querétaro", "ROO": "Quintana Roo",
+    "SLP": "San Luis Potosí", "SIN": "Sinaloa", "SON": "Sonora",
+    "TAB": "Tabasco", "TAM": "Tamaulipas", "TLA": "Tlaxcala",
+    "VER": "Veracruz", "YUC": "Yucatán", "ZAC": "Zacatecas",
+    "NL": "Nuevo León", "QRO": "Querétaro", "QROO": "Quintana Roo",
+    "MICH": "Michoacán", "CHIS": "Chiapas",
+    "CHIH": "Chihuahua", "COAH": "Coahuila",
+    "DF": "Ciudad de México",
+    "AGS": "Aguascalientes", "BC": "Baja California",
+    "DGO": "Durango", "GTO": "Guanajuato", "HGO": "Hidalgo",
+    "TAMS": "Tamaulipas", "TLAX": "Tlaxcala",
+}
+
+
+def _clean(obj):
+    """Make obj JSON-serializable (handle NaN, numpy types, ndarray)."""
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        v = float(obj)
+        return None if math.isnan(v) or math.isinf(v) else v
+    if isinstance(obj, np.ndarray):
+        return _clean(obj.tolist())
+    if isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _clean(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_clean(v) for v in obj]
+    return obj
+
+
+def _ctx(active_page: str, **extra):
+    return {
+        "active_page": active_page,
+        "posthog_snippet": POSTHOG_SNIPPET,
+        **extra,
+    }
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/how-its-built", response_class=HTMLResponse)
+async def how_its_built(request: Request):
+    return templates.TemplateResponse(
+        request, "how_its_built.html",
+        context=_ctx("how_its_built"),
+    )
+
+
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    kpis = None
+    error = None
+    try:
+        sql = f"""
+        SELECT
+            COUNT(DISTINCT claim_id)        AS total_claims,
+            ROUND(SUM(total_paid), 2)       AS total_paid,
+            ROUND(AVG(total_paid), 2)       AS avg_severity,
+            COUNT(DISTINCT policyholder_id)  AS unique_policyholders
+        FROM `{DATASET_ANALYTICS}`.fct_claims
+        """
+        df = query_bq(sql)
+        row = df.iloc[0]
+        kpis = {
+            "total_claims": int(row["total_claims"]),
+            "total_paid": float(row["total_paid"]),
+            "avg_severity": float(row["avg_severity"]),
+            "unique_policyholders": int(row["unique_policyholders"]),
+        }
+    except Exception as exc:
+        error = str(exc)
+
+    return templates.TemplateResponse(
+        request, "home.html", context=_ctx("home", kpis=kpis, error=error)
+    )
+
+
+@app.get("/loss-triangle", response_class=HTMLResponse)
+async def loss_triangle(request: Request):
+    chart_data = None
+    factors_data = None
+    error = None
+    try:
+        sql = (
+            f"SELECT * FROM `{DATASET_REPORTS}`.rpt_loss_triangle "
+            "ORDER BY accident_year"
+        )
+        df = query_bq(sql)
+
+        dev_cols = sorted(
+            [c for c in df.columns if c.startswith("dev_year_")],
+            key=lambda c: int(c.split("_")[-1]),
+        )
+        matrix = df[dev_cols].values.astype(float)
+        y_labels = df["accident_year"].astype(str).tolist()
+        x_labels = [f"Dev {c.split('_')[-1]}" for c in dev_cols]
+
+        text_matrix = [
+            [f"MXN {v:,.0f}" if pd.notna(v) and v > 0 else "" for v in row]
+            for row in matrix
+        ]
+
+        chart_data = _clean({
+            "z": matrix.tolist(),
+            "x": x_labels,
+            "y": y_labels,
+            "text": text_matrix,
+        })
+
+        factors_rows = []
+        for i in range(1, len(dev_cols)):
+            col_prev = matrix[:, i - 1]
+            col_curr = matrix[:, i]
+            ratios = []
+            for prev, curr in zip(col_prev, col_curr):
+                if pd.notna(prev) and pd.notna(curr) and prev > 0 and curr > 0:
+                    ratios.append(round(curr / prev, 4))
+                else:
+                    ratios.append(None)
+            factors_rows.append({
+                "label": f"{x_labels[i-1]} -> {x_labels[i]}",
+                "ratios": ratios,
+            })
+
+        weighted_avgs = []
+        for i in range(1, len(dev_cols)):
+            col_prev = matrix[:, i - 1]
+            col_curr = matrix[:, i]
+            mask = (
+                pd.notna(col_prev) & pd.notna(col_curr)
+                & (col_prev > 0) & (col_curr > 0)
+            )
+            if mask.any():
+                weighted_avgs.append(
+                    round(col_curr[mask].sum() / col_prev[mask].sum(), 4)
+                )
+            else:
+                weighted_avgs.append(None)
+
+        factors_data = _clean({
+            "y_labels": y_labels,
+            "columns": [r["label"] for r in factors_rows],
+            "rows": [r["ratios"] for r in factors_rows],
+            "weighted_avgs": weighted_avgs,
+        })
+
+    except Exception as exc:
+        error = str(exc)
+
+    return templates.TemplateResponse(
+        request, "loss_triangle.html",
+        context=_ctx(
+            "loss_triangle",
+            chart_data=chart_data, factors_data=factors_data, error=error,
+        ),
+    )
+
+
+@app.get("/portfolio-health", response_class=HTMLResponse)
+async def portfolio_health(request: Request):
+    dataset = None
+    error = None
+    try:
+        sql = (
+            f"SELECT * FROM `{DATASET_REPORTS}`.rpt_claim_frequency "
+            "ORDER BY year, coverage_type"
+        )
+        df = query_bq(sql)
+        records = df.to_dict(orient="records")
+        dataset = _clean({
+            "records": records,
+            "coverages": sorted(df["coverage_type"].unique().tolist()),
+            "year_min": int(df["year"].min()),
+            "year_max": int(df["year"].max()),
+            "columns": df.columns.tolist(),
+        })
+    except Exception as exc:
+        error = str(exc)
+
+    return templates.TemplateResponse(
+        request, "portfolio_health.html",
+        context=_ctx("portfolio_health", dataset=dataset, error=error),
+    )
+
+
+@app.get("/pricing-adequacy", response_class=HTMLResponse)
+async def pricing_adequacy(request: Request):
+    chart_data = None
+    error = None
+    available = False
+    try:
+        _ds = "dev_pricing_ml"
+
+        scatter_sql = f"""
+        SELECT predicted_pure_premium, actual_premium, pricing_assessment
+        FROM `{_ds}`.model_scoring
+        WHERE RAND() < 2000.0 / (SELECT COUNT(*) FROM `{_ds}`.model_scoring)
+        """
+        scatter_df = query_bq(scatter_sql)
+        available = True
+
+        color_map = {
+            "underpriced": "#EF4444",
+            "adequate": "#3B82F6",
+            "overpriced": "#10B981",
+        }
+        scatter = []
+        for assessment in scatter_df["pricing_assessment"].unique():
+            sub = scatter_df[scatter_df["pricing_assessment"] == assessment]
+            scatter.append({
+                "x": sub["predicted_pure_premium"].tolist(),
+                "y": sub["actual_premium"].tolist(),
+                "name": assessment,
+                "color": color_map.get(assessment, "#94A3B8"),
+            })
+
+        pie_sql = f"""
+        SELECT pricing_assessment, COUNT(*) AS cnt
+        FROM `{_ds}`.model_scoring
+        GROUP BY pricing_assessment
+        """
+        pie_df = query_bq(pie_sql)
+        pie = {
+            "labels": pie_df["pricing_assessment"].tolist(),
+            "values": pie_df["cnt"].tolist(),
+            "colors": [
+                color_map.get(l, "#94A3B8")
+                for l in pie_df["pricing_assessment"]
+            ],
+        }
+
+        agg_sql = f"""
+        SELECT
+            age_band,
+            state_risk_group,
+            AVG(price_adequacy_ratio) AS avg_ratio
+        FROM `{_ds}`.model_scoring
+        GROUP BY age_band, state_risk_group
+        """
+        agg_df = query_bq(agg_sql)
+
+        age_agg = (
+            agg_df.groupby("age_band", as_index=False)["avg_ratio"]
+            .mean()
+            .sort_values("avg_ratio", ascending=False)
+        )
+        age_bar = {"x": age_agg["age_band"].tolist(), "y": age_agg["avg_ratio"].tolist()}
+
+        state_agg = (
+            agg_df.groupby("state_risk_group", as_index=False)["avg_ratio"]
+            .mean()
+            .sort_values("avg_ratio", ascending=False)
+        )
+        state_bar = {"x": state_agg["state_risk_group"].tolist(), "y": state_agg["avg_ratio"].tolist()}
+
+        top_sql = f"""
+        SELECT policy_id, coverage_type, age_band, state_risk_group,
+               predicted_pure_premium, actual_premium, price_adequacy_ratio
+        FROM `{_ds}`.model_scoring
+        WHERE pricing_assessment = 'underpriced'
+        ORDER BY price_adequacy_ratio DESC
+        LIMIT 20
+        """
+        top_df = query_bq(top_sql)
+        underpriced_table = {
+            "columns": top_df.columns.tolist(),
+            "rows": top_df.values.tolist(),
+        }
+
+        chart_data = _clean({
+            "scatter": scatter,
+            "pie": pie,
+            "age_bar": age_bar,
+            "state_bar": state_bar,
+            "underpriced_table": underpriced_table,
+        })
+
+    except Exception:
+        available = False
+
+    return templates.TemplateResponse(
+        request, "pricing_adequacy.html",
+        context=_ctx(
+            "pricing_adequacy",
+            chart_data=chart_data, available=available, error=error,
+        ),
+    )
+
+
+@app.get("/geographic-risk", response_class=HTMLResponse)
+async def geographic_risk(request: Request):
+    dataset = None
+    error = None
+    try:
+        sql = f"""
+        SELECT
+            p.state_code,
+            c.accident_year,
+            COUNT(c.claim_id)           AS claim_count,
+            ROUND(AVG(c.total_paid), 2) AS avg_severity,
+            ROUND(SUM(c.total_paid), 2) AS total_paid
+        FROM `{DATASET_ANALYTICS}`.fct_claims c
+        JOIN `{DATASET_ANALYTICS}`.dim_policyholder p
+          ON c.policyholder_id = p.policyholder_id
+        GROUP BY p.state_code, c.accident_year
+        ORDER BY p.state_code, c.accident_year
+        """
+        df = query_bq(sql)
+
+        df["state_name"] = df["state_code"].map(STATE_NAMES).fillna(df["state_code"])
+
+        records = df.to_dict(orient="records")
+        dataset = _clean({
+            "records": records,
+            "states": sorted(df["state_code"].dropna().unique().tolist()),
+            "year_min": int(df["accident_year"].min()),
+            "year_max": int(df["accident_year"].max()),
+            "state_names": STATE_NAMES,
+        })
+    except Exception as exc:
+        error = str(exc)
+
+    return templates.TemplateResponse(
+        request, "geographic_risk.html",
+        context=_ctx("geographic_risk", dataset=dataset, error=error),
+    )

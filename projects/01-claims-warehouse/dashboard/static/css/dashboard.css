@@ -1,0 +1,281 @@
+/* ── Animations ────────────────────────────── */
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+
+@keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+
+/* Navigation progress bar */
+@keyframes navProgress {
+    0%   { width: 0; }
+    40%  { width: 55%; }
+    80%  { width: 85%; }
+    100% { width: 100%; opacity: 0; }
+}
+
+.nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: #2563EB;
+    z-index: 9999;
+    animation: navProgress 1.2s ease-out forwards;
+}
+
+.chart-skeleton {
+    background: linear-gradient(90deg, #f1f5f9 25%, #e8ecf1 37%, #f1f5f9 63%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 6px;
+}
+
+/* ── Sidebar ──────────────────────────────── */
+
+.nav-link {
+    display: block;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #8896AB;
+    transition: color 0.12s, background 0.12s;
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    color: #CBD5E1;
+    background: rgba(255,255,255,0.05);
+}
+
+.nav-link.active {
+    color: #FFFFFF;
+    background: rgba(255,255,255,0.08);
+}
+
+/* ── Metric strip ─────────────────────────── */
+
+.metric-cell {
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+.metric-spark {
+    margin-bottom: 6px;
+    opacity: 0.5;
+}
+
+/* ── Cards ────────────────────────────────── */
+
+.card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+}
+
+.kpi-card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 16px 20px;
+}
+
+.kpi-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6B7280;
+    letter-spacing: 0.01em;
+    margin-top: 2px;
+}
+
+.kpi-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: -0.02em;
+}
+
+.chart-card {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chart-card-header {
+    padding: 16px 20px 0;
+}
+
+.chart-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.chart-card-desc {
+    font-size: 13px;
+    color: #6B7280;
+    margin-top: 2px;
+    line-height: 1.5;
+}
+
+/* ── Section ──────────────────────────────── */
+
+.section-context {
+    font-size: 14px;
+    color: #4B5563;
+    line-height: 1.65;
+}
+
+.section-context strong {
+    color: #111827;
+    font-weight: 600;
+}
+
+/* ── Filters ──────────────────────────────── */
+
+.filter-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.filter-select {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #374151;
+    background: #fff;
+    cursor: pointer;
+}
+
+.filter-select:hover { border-color: #9CA3AF; }
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 20;
+    padding: 4px;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #374151;
+    cursor: pointer;
+}
+
+.dropdown-item:hover { background: #F3F4F6; }
+
+/* ── Tables ───────────────────────────────── */
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.data-table th {
+    padding: 8px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6B7280;
+    background: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 7px 14px;
+    color: #374151;
+    border-bottom: 1px solid #F3F4F6;
+    white-space: nowrap;
+}
+
+.data-table tbody tr:hover { background: #F9FAFB; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+/* ── Range inputs ─────────────────────────── */
+
+input[type="range"] {
+    height: 3px;
+    border-radius: 2px;
+    background: #D1D5DB;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #111827;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #D1D5DB;
+}
+
+/* ── Scrollbar ────────────────────────────── */
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+
+/* ── Language toggle (sidebar) ────────────── */
+
+.lang-toggle-btn {
+    padding: 3px 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748B;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.12s;
+    border: none;
+    letter-spacing: 0.04em;
+}
+
+.lang-toggle-btn:hover { color: #CBD5E1; }
+
+.lang-toggle-active {
+    color: #FFFFFF;
+    background: rgba(255,255,255,0.1);
+}
+
+/* ── Plotly ────────────────────────────────── */
+
+.js-plotly-plot .plotly .modebar { right: 4px !important; top: 2px !important; }
+.js-plotly-plot .plotly .modebar-btn { font-size: 13px !important; }

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Pricing Adequacy -- Claims Analytics{% endblock %}
+{% block page_title %}
+<span data-lang="en">Pricing Adequacy</span>
+<span data-lang="es" class="hidden">Adecuación de Tarifa</span>
+{% endblock %}
+
+{% block content %}
+{% if not available %}
+<div class="card p-4 border-blue-200 bg-blue-50 text-sm text-blue-800">
+    <span data-lang="en">The model_scoring table does not exist yet in BigQuery. Run the P06 pricing-ML pipeline to generate scoring data.</span>
+    <span data-lang="es" class="hidden">La tabla model_scoring aún no existe en BigQuery. Ejecuta el pipeline P06 de pricing-ML para generar los datos de calificación.</span>
+</div>
+{% else %}
+<p class="section-context mb-5" data-lang="en">
+    A GLM pricing model scores each policy with a <strong>predicted pure premium</strong>, what the policy
+    should cost based on its risk profile. Comparing that against the <strong>actual premium charged</strong>
+    reveals pricing gaps. <strong>Red dots are underpriced</strong>: the insurer charges less than the model
+    says is needed. These represent the highest risk to portfolio profitability.
+</p>
+<p class="section-context mb-5 hidden" data-lang="es">
+    Un modelo GLM de tarificación califica cada póliza con una <strong>prima pura estimada</strong>:
+    lo que debería costar según su perfil de riesgo. Al comparar esa cifra contra la
+    <strong>prima cobrada</strong> se revelan brechas de tarificación. Los <strong>puntos rojos son
+    pólizas subtarificadas</strong>, donde la aseguradora cobra menos de lo que el modelo indica.
+    Representan el mayor riesgo para la rentabilidad del portafolio.
+</p>
+{% endif %}
+
+{% if chart_data %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+    {% if chart_data.scatter %}
+    <div class="chart-card xl:col-span-2">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Predicted vs Actual Premium</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Prima Estimada vs Prima Real</h3>
+            <p class="chart-card-desc" data-lang="en">Points above the diagonal are overpriced (good); below it are underpriced (risky).</p>
+            <p class="chart-card-desc hidden" data-lang="es">Puntos arriba de la diagonal están sobretarificados (bien); abajo de ella, subtarificados (riesgo).</p>
+        </div>
+        <div id="scatter-chart" class="chart-skeleton" style="height:440px;"></div>
+    </div>
+    {% endif %}
+    {% if chart_data.pie %}
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Assessment Split</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Distribución de Evaluación</h3>
+            <p class="chart-card-desc" data-lang="en">Share of policies by pricing assessment.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Proporción de pólizas por evaluación de tarificación.</p>
+        </div>
+        <div id="pie-chart" class="chart-skeleton" style="height:440px;"></div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+    {% if chart_data.age_bar %}
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Adequacy Ratio by Age Band</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Razón de Adecuación por Banda de Edad</h3>
+            <p class="chart-card-desc" data-lang="en">Ratio > 1.0 means the model requires more premium than is charged. Higher bars = larger pricing gap.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Razón > 1.0 significa que el modelo requiere más prima de la cobrada. Barras más altas = brecha más grande.</p>
+        </div>
+        <div id="age-chart" class="chart-skeleton" style="height:340px;"></div>
+    </div>
+    {% endif %}
+    {% if chart_data.state_bar %}
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Adequacy Ratio by State Risk Group</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Razón de Adecuación por Grupo de Riesgo Estatal</h3>
+            <p class="chart-card-desc" data-lang="en">Geographic risk groups ranked by the gap between required and charged premium.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Grupos de riesgo geográfico ordenados por la brecha entre prima requerida y cobrada.</p>
+        </div>
+        <div id="state-chart" class="chart-skeleton" style="height:340px;"></div>
+    </div>
+    {% endif %}
+</div>
+
+{% if chart_data.underpriced_table %}
+<div class="chart-card">
+    <div class="chart-card-header">
+        <h3 class="chart-card-title" data-lang="en">Top 20 Most Underpriced Policies</h3>
+        <h3 class="chart-card-title hidden" data-lang="es">Top 20 Pólizas Más Subtarificadas</h3>
+        <p class="chart-card-desc" data-lang="en">Policies where the gap between required and charged premium is largest, priority candidates for re-rating at renewal.</p>
+        <p class="chart-card-desc hidden" data-lang="es">Pólizas con la brecha más grande entre prima requerida y cobrada, candidatas prioritarias para retarificación en renovación.</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table" id="underpriced-table"><thead></thead><tbody></tbody></table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if chart_data %}
+<script>
+waitForPlotly(function() {
+    var data = {{ chart_data | tojson }};
+    var base = window.DashboardPlotly.baseLayout, cfg = window.DashboardPlotly.config;
+
+    document.querySelectorAll('.chart-skeleton').forEach(function(el) { el.classList.remove('chart-skeleton'); });
+
+    if (data.scatter) {
+        Plotly.newPlot('scatter-chart', data.scatter.map(function(t) {
+            return {
+                x:t.x, y:t.y, name:t.name, type:'scatter', mode:'markers',
+                marker:{color:t.color, opacity:0.45, size:4},
+                hovertemplate:'Predicted: %{x:,.0f}<br>Actual: %{y:,.0f}<extra>'+t.name+'</extra>',
+            };
+        }), {
+            ...base, height:440,
+            margin:{l:65, r:16, t:16, b:70},
+            xaxis:{...base.xaxis, title:{text:'Predicted Pure Premium (MXN)', standoff:12}, tickformat:',.0f'},
+            yaxis:{...base.yaxis, title:{text:'Actual Premium (MXN)', standoff:8}, tickformat:',.0f'},
+            legend:{orientation:'h', y:-0.22, x:0.5, xanchor:'center', font:{size:11}},
+        }, cfg);
+    }
+
+    if (data.pie) {
+        Plotly.newPlot('pie-chart', [{
+            labels:data.pie.labels, values:data.pie.values, type:'pie',
+            marker:{colors:data.pie.colors},
+            textinfo:'percent', textposition:'inside', textfont:{size:13, color:'#fff'},
+            hovertemplate:'%{label}: %{value:,} (%{percent})<extra></extra>',
+            hole:0.48,
+        }], {
+            ...base, height:440, showlegend:true,
+            legend:{orientation:'h', y:-0.08, x:0.5, xanchor:'center', font:{size:11}},
+            margin:{l:8, r:8, t:20, b:40},
+        }, cfg);
+    }
+
+    if (data.age_bar) {
+        Plotly.newPlot('age-chart', [{
+            x:data.age_bar.x, y:data.age_bar.y, type:'bar',
+            marker:{color:'#2563EB', cornerradius:3},
+            text:data.age_bar.y.map(function(v){return v!=null?v.toFixed(2):'';}),
+            textposition:'outside',
+            hovertemplate:'%{x}: %{y:.2f}<extra></extra>',
+        }], {
+            ...base, height:340, showlegend:false,
+            margin:{l:50, r:16, t:16, b:50},
+            xaxis:{...base.xaxis},
+            yaxis:{...base.yaxis, title:{text:'Ratio', standoff:4}},
+        }, cfg);
+    }
+
+    if (data.state_bar) {
+        Plotly.newPlot('state-chart', [{
+            x:data.state_bar.x, y:data.state_bar.y, type:'bar',
+            marker:{color:'#7C3AED', cornerradius:3},
+            text:data.state_bar.y.map(function(v){return v!=null?v.toFixed(2):'';}),
+            textposition:'outside',
+            hovertemplate:'%{x}: %{y:.2f}<extra></extra>',
+        }], {
+            ...base, height:340, showlegend:false,
+            margin:{l:50, r:16, t:16, b:50},
+            xaxis:{...base.xaxis},
+            yaxis:{...base.yaxis, title:{text:'Ratio', standoff:4}},
+        }, cfg);
+    }
+
+    if (data.underpriced_table) {
+        var tbl = data.underpriced_table;
+        var labels = { policy_id:'Policy ID', coverage_type:'Coverage', age_band:'Age Band', state_risk_group:'State Risk', predicted_pure_premium:'Predicted PP', actual_premium:'Actual Premium', price_adequacy_ratio:'Adequacy Ratio' };
+        var thead = document.querySelector('#underpriced-table thead');
+        var tbody = document.querySelector('#underpriced-table tbody');
+        thead.innerHTML = '<tr>' + tbl.columns.map(function(c){return '<th>'+(labels[c]||c)+'</th>';}).join('') + '</tr>';
+        var fmtCols = ['predicted_pure_premium','actual_premium'];
+        tbody.innerHTML = tbl.rows.map(function(row) {
+            return '<tr>' + row.map(function(val, i) {
+                var c = tbl.columns[i];
+                if (val!=null && fmtCols.indexOf(c)!==-1) return '<td>$'+Number(val).toLocaleString(undefined,{maximumFractionDigits:0})+'</td>';
+                if (val!=null && c==='price_adequacy_ratio') return '<td>'+Number(val).toFixed(2)+'</td>';
+                return '<td>'+(val!=null?val:'')+'</td>';
+            }).join('') + '</tr>';
+        }).join('');
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

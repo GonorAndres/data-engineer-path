@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Overview -- Claims Analytics{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
+    Could not load KPI summary. {{ error }}
+</div>
+{% endif %}
+
+<p class="section-context mb-4" data-lang="en">
+    This dashboard is the <strong>presentation layer</strong> of a data engineering project that spans six
+    interconnected systems: synthetic data generation, a Dataform-managed warehouse in BigQuery,
+    an orchestrated ELT pipeline on Cloud Run, a Pub/Sub streaming intake, a GLM pricing model,
+    and this FastAPI application deployed on Cloud Run.
+</p>
+<p class="section-context mb-6" data-lang="en">
+    Every number below comes from a live SQL aggregation against the
+    <code class="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded">dev_claims_analytics</code>
+    and <code class="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded">dev_claims_reports</code> datasets
+    in BigQuery. The portfolio covers five lines of business across all 32 states of Mexico.
+</p>
+
+<p class="section-context mb-4 hidden" data-lang="es">
+    Este dashboard es la <strong>capa de presentación</strong> de un proyecto de ingeniería de datos que conecta seis
+    sistemas: generación de datos sintéticos, un warehouse administrado con Dataform en BigQuery,
+    un pipeline ELT orquestado en Cloud Run, ingesta en tiempo real con Pub/Sub, un modelo GLM de tarificación
+    y esta aplicación FastAPI desplegada en Cloud Run.
+</p>
+<p class="section-context mb-6 hidden" data-lang="es">
+    Cada número que ves aquí viene de una consulta SQL en vivo contra los datasets
+    <code class="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded">dev_claims_analytics</code>
+    y <code class="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded">dev_claims_reports</code>
+    en BigQuery. El portafolio cubre cinco líneas de negocio en los 32 estados de México.
+</p>
+
+{% if kpis %}
+<div class="card overflow-hidden mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4">
+        <div class="metric-cell border-r border-b lg:border-b-0 border-slate-100">
+            <svg class="metric-spark" width="52" height="20" viewBox="0 0 52 24" fill="none">
+                <rect x="0" y="14" width="7" height="10" rx="1.5" fill="#CBD5E1"/>
+                <rect x="11" y="8" width="7" height="16" rx="1.5" fill="#94A3B8"/>
+                <rect x="22" y="2" width="7" height="22" rx="1.5" fill="#64748B"/>
+                <rect x="33" y="10" width="7" height="14" rx="1.5" fill="#94A3B8"/>
+                <rect x="44" y="5" width="7" height="19" rx="1.5" fill="#475569"/>
+            </svg>
+            <span class="kpi-value">{{ "{:,}".format(kpis.total_claims) }}</span>
+            <span class="kpi-label" data-lang="en">Total Claims</span>
+            <span class="kpi-label hidden" data-lang="es">Siniestros Totales</span>
+        </div>
+        <div class="metric-cell border-b lg:border-b-0 lg:border-r border-slate-100">
+            <svg class="metric-spark" width="52" height="20" viewBox="0 0 52 24" fill="none">
+                <path d="M0 22 Q6 18 13 16 T26 10 T39 6 T52 2 V24 H0Z" fill="#CBD5E1" opacity="0.35"/>
+                <path d="M0 22 Q6 18 13 16 T26 10 T39 6 T52 2" stroke="#64748B" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                <circle cx="52" cy="2" r="2.5" fill="#475569"/>
+            </svg>
+            <span class="kpi-value">${{ "{:,.0f}".format(kpis.total_paid) }}</span>
+            <span class="kpi-label" data-lang="en">Total Paid (MXN)</span>
+            <span class="kpi-label hidden" data-lang="es">Total Pagado (MXN)</span>
+        </div>
+        <div class="metric-cell border-r border-slate-100">
+            <svg class="metric-spark" width="52" height="20" viewBox="0 0 52 24" fill="none">
+                <rect x="0" y="9" width="52" height="6" rx="3" fill="#E2E8F0"/>
+                <rect x="0" y="9" width="34" height="6" rx="3" fill="#64748B"/>
+                <circle cx="34" cy="12" r="4.5" fill="#475569" stroke="#fff" stroke-width="1.5"/>
+            </svg>
+            <span class="kpi-value">${{ "{:,.0f}".format(kpis.avg_severity) }}</span>
+            <span class="kpi-label" data-lang="en">Avg Severity (MXN)</span>
+            <span class="kpi-label hidden" data-lang="es">Severidad Promedio (MXN)</span>
+        </div>
+        <div class="metric-cell">
+            <svg class="metric-spark" width="52" height="24" viewBox="0 0 52 24" fill="none">
+                <circle cx="5" cy="8" r="3.5" fill="#94A3B8"/>
+                <circle cx="16" cy="14" r="2.5" fill="#CBD5E1"/>
+                <circle cx="24" cy="6" r="4" fill="#64748B"/>
+                <circle cx="34" cy="16" r="2" fill="#CBD5E1"/>
+                <circle cx="40" cy="9" r="3" fill="#94A3B8"/>
+                <circle cx="49" cy="12" r="3.5" fill="#475569"/>
+            </svg>
+            <span class="kpi-value">{{ "{:,}".format(kpis.unique_policyholders) }}</span>
+            <span class="kpi-label" data-lang="en">Policyholders</span>
+            <span class="kpi-label hidden" data-lang="es">Asegurados</span>
+        </div>
+    </div>
+</div>
+
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3" data-lang="en">Analysis Views</h2>
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 hidden" data-lang="es">Vistas de Análisis</h2>
+
+<div class="space-y-2">
+    <a href="/loss-triangle" class="card block p-4 hover:border-slate-300 transition-colors">
+        <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Loss Development Triangle</span>
+        <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Triángulo de Desarrollo de Pérdidas</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">How claim costs develop over time. Shows cumulative paid losses and IBNR reserve patterns by accident year.</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Cómo evolucionan los costos de siniestros a lo largo del tiempo. Muestra pérdidas pagadas acumuladas y patrones de reserva IBNR por año de ocurrencia.</span>
+    </a>
+    <a href="/portfolio-health" class="card block p-4 hover:border-slate-300 transition-colors">
+        <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Portfolio Health</span>
+        <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Salud del Portafolio</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">Underwriting performance trends: claim frequency, pure premium, and loss ratios across coverage lines and years.</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Tendencias de suscripción: frecuencia de siniestros, prima pura y razones de pérdida por línea de cobertura y año.</span>
+    </a>
+    <a href="/pricing-adequacy" class="card block p-4 hover:border-slate-300 transition-colors">
+        <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Pricing Adequacy</span>
+        <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Adecuación de Precios</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">GLM model output comparing predicted required premium vs. actual charged premium to identify mispriced policies.</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Salida del modelo GLM que compara la prima requerida estimada contra la prima cobrada para identificar pólizas mal tarificadas.</span>
+    </a>
+    <a href="/geographic-risk" class="card block p-4 hover:border-slate-300 transition-colors">
+        <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Geographic Risk Concentration</span>
+        <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Concentración de Riesgo Geográfico</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">State-level claim volume and severity. Highlights where portfolio risk is most concentrated across Mexico.</span>
+        <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Volumen y severidad de siniestros por estado. Muestra dónde se concentra el riesgo del portafolio en México.</span>
+    </a>
+</div>
+
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mt-8 mb-3" data-lang="en">Underlying Data Pipeline</h2>
+<h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mt-8 mb-3 hidden" data-lang="es">Pipeline de Datos Subyacente</h2>
+<div class="card p-5">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-center text-[12px]">
+        <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
+            <span class="block font-semibold text-slate-700">P01</span>
+            <span class="text-slate-500">Claims Warehouse</span>
+            <span class="block text-[10px] text-slate-400 mt-1">Dataform + BigQuery</span>
+        </div>
+        <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
+            <span class="block font-semibold text-slate-700">P02</span>
+            <span class="text-slate-500">Orchestrated ELT</span>
+            <span class="block text-[10px] text-slate-400 mt-1">Cloud Run + Scheduler</span>
+        </div>
+        <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
+            <span class="block font-semibold text-slate-700">P03</span>
+            <span class="text-slate-500">Streaming Intake</span>
+            <span class="block text-[10px] text-slate-400 mt-1">Pub/Sub + Cloud Run</span>
+        </div>
+        <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
+            <span class="block font-semibold text-slate-700">P04</span>
+            <span class="text-slate-500">Data Quality</span>
+            <span class="block text-[10px] text-slate-400 mt-1">Dataform Assertions</span>
+        </div>
+        <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
+            <span class="block font-semibold text-slate-700">P05</span>
+            <span class="text-slate-500">Cost Governance</span>
+            <span class="block text-[10px] text-slate-400 mt-1">BQ Slots + Budgets</span>
+        </div>
+        <div class="py-3 px-2 rounded-md bg-white border border-dashed border-slate-300">
+            <span class="block font-semibold text-slate-700">P06</span>
+            <span class="text-slate-500">Pricing ML</span>
+            <span class="block text-[10px] text-slate-400 mt-1">GLM &rarr; model_scoring</span>
+        </div>
+    </div>
+    <p class="text-[12px] text-slate-400 mt-3" data-lang="en">
+        This dashboard reads from the tables that P01 through P06 produce. Code, decision docs, and deployment configs live in
+        <a href="https://github.com/GonorAndres/data-engineer-path" target="_blank" rel="noopener" class="underline hover:text-slate-600">github.com/GonorAndres/data-engineer-path</a>.
+    </p>
+    <p class="text-[12px] text-slate-400 mt-3 hidden" data-lang="es">
+        Este dashboard lee las tablas que producen P01 a P06. El código, la documentación de decisiones y los configs de despliegue están en
+        <a href="https://github.com/GonorAndres/data-engineer-path" target="_blank" rel="noopener" class="underline hover:text-slate-600">github.com/GonorAndres/data-engineer-path</a>.
+    </p>
+</div>
+{% endif %}
+{% endblock %}

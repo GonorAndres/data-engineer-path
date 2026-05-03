@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Claims Analytics{% endblock %}</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.plot.ly">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sidebar: { DEFAULT: '#101827', hover: '#1C2536' },
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    {{ posthog_snippet | safe }}
+</head>
+<body class="h-full font-sans bg-[#F6F7F9] antialiased text-slate-700">
+    <div class="flex h-full" id="app">
+
+        <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-40 lg:hidden hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-[240px] bg-sidebar flex flex-col transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200">
+            <div class="px-5 py-4 border-b border-white/[0.06]">
+                <span class="text-white/90 font-semibold text-[15px] tracking-tight">Claims Analytics</span>
+                <span class="block text-[10px] text-slate-500 mt-0.5 tracking-wide">Data Engineering Output</span>
+            </div>
+
+            <nav class="flex-1 px-3 mt-3 space-y-px">
+                <a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}">
+                    <span data-lang="en">Overview</span><span data-lang="es" class="hidden">Resumen</span>
+                </a>
+                <a href="/loss-triangle" class="nav-link {% if active_page == 'loss_triangle' %}active{% endif %}">
+                    <span data-lang="en">Loss Triangle</span><span data-lang="es" class="hidden">Triángulo de Pérdidas</span>
+                </a>
+                <a href="/portfolio-health" class="nav-link {% if active_page == 'portfolio_health' %}active{% endif %}">
+                    <span data-lang="en">Portfolio Health</span><span data-lang="es" class="hidden">Salud del Portafolio</span>
+                </a>
+                <a href="/pricing-adequacy" class="nav-link {% if active_page == 'pricing_adequacy' %}active{% endif %}">
+                    <span data-lang="en">Pricing Adequacy</span><span data-lang="es" class="hidden">Adecuación de Tarifa</span>
+                </a>
+                <a href="/geographic-risk" class="nav-link {% if active_page == 'geographic_risk' %}active{% endif %}">
+                    <span data-lang="en">Geographic Risk</span><span data-lang="es" class="hidden">Riesgo Geográfico</span>
+                </a>
+                <div class="border-t border-white/[0.06] my-2"></div>
+                <a href="/how-its-built" class="nav-link {% if active_page == 'how_its_built' %}active{% endif %}">
+                    <span data-lang="en">How It's Built</span><span data-lang="es" class="hidden">Cómo Se Construyó</span>
+                </a>
+            </nav>
+
+            <!-- Language toggle -->
+            <div class="px-4 mx-3 mb-3">
+                <div class="flex rounded-md overflow-hidden border border-white/[0.08]">
+                    <button onclick="setLang('en')" id="btn-en" class="flex-1 lang-toggle-btn lang-toggle-active">EN</button>
+                    <button onclick="setLang('es')" id="btn-es" class="flex-1 lang-toggle-btn">ES</button>
+                </div>
+            </div>
+
+            <!-- Pipeline context -->
+            <div class="px-4 py-3 mx-3 mb-3 rounded-md bg-white/[0.04] text-[11px] text-slate-500 leading-relaxed">
+                <span class="text-slate-400 font-medium">Pipeline</span><br>
+                GCS &rarr; BigQuery &rarr; Dataform &rarr; FastAPI
+            </div>
+
+            <div class="px-5 py-3 border-t border-white/[0.06] text-[11px] text-slate-500 space-y-1">
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span data-lang="en">BigQuery Connected</span><span data-lang="es" class="hidden">BigQuery Conectado</span>
+                </div>
+                <div>us-central1 &middot; Cloud Run</div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <header class="sticky top-0 z-30 bg-white border-b border-slate-200/70 px-5 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-1 rounded hover:bg-slate-100">
+                        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                    </button>
+                    <h1 class="text-[15px] font-semibold text-slate-800">{% block page_title %}{% endblock %}</h1>
+                </div>
+                <div class="hidden sm:block text-[11px] text-slate-400">
+                    <span data-lang="en">P01 Claims Warehouse</span>
+                    <span data-lang="es" class="hidden">P01 Almacén de Siniestros</span>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-auto">
+                <div class="p-5 max-w-[1360px] mx-auto">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8" defer></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
