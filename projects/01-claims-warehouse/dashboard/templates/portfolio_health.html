@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Portfolio Health -- Claims Analytics{% endblock %}
+{% block page_title %}
+<span data-lang="en">Portfolio Health</span>
+<span data-lang="es" class="hidden">Salud del Portafolio</span>
+{% endblock %}
+
+{% block content %}
+<p class="section-context mb-5" data-lang="en">
+    Tracks underwriting performance over time by coverage line. <strong>Rising claim frequency</strong>
+    signals deteriorating risk quality. <strong>Loss ratios above 100%</strong> mean the portfolio pays out
+    more than it collects in premium; sustained ratios above that threshold indicate pricing needs correction.
+</p>
+<p class="section-context mb-5 hidden" data-lang="es">
+    Monitorea el desempeño de suscripción a lo largo del tiempo por línea de cobertura.
+    Una <strong>frecuencia de siniestros al alza</strong> señala deterioro en la calidad del riesgo.
+    <strong>Razones de pérdida por encima del 100%</strong> significan que el portafolio paga más de lo que
+    cobra en prima; si se sostienen, la tarificación necesita corrección.
+</p>
+
+{% if error %}
+<div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
+    Could not load portfolio health data. {{ error }}
+</div>
+{% endif %}
+
+{% if dataset %}
+<!-- Filters -->
+<div class="card p-4 mb-5">
+    <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-[180px]">
+            <label class="filter-label" data-lang="en">Coverage Type</label>
+            <label class="filter-label hidden" data-lang="es">Tipo de Cobertura</label>
+            <div class="relative" id="coverage-dropdown">
+                <button type="button" onclick="toggleDropdown()" class="filter-select w-full text-left">
+                    <span id="coverage-label">All coverages</span>
+                    <svg class="w-4 h-4 text-slate-400 ml-auto" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </button>
+                <div id="coverage-options" class="dropdown-menu hidden">
+                    <label class="dropdown-item">
+                        <input type="checkbox" id="coverage-all" checked onchange="toggleAllCoverages(this)" class="rounded border-slate-300">
+                        <span class="font-medium">Select All</span>
+                    </label>
+                    <div class="border-t border-slate-100 my-1"></div>
+                    <div id="coverage-list"></div>
+                </div>
+            </div>
+        </div>
+        <div class="flex-1 min-w-[180px]">
+            <label class="filter-label" data-lang="en">Year Range</label>
+            <label class="filter-label hidden" data-lang="es">Rango de Años</label>
+            <div class="flex items-center gap-3">
+                <input type="range" id="year-min" class="flex-1" onchange="applyFilters()">
+                <span id="year-range-label" class="text-sm font-medium text-slate-700 whitespace-nowrap min-w-[70px] text-center"></span>
+                <input type="range" id="year-max" class="flex-1" onchange="applyFilters()">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5" id="ph-kpis">
+    <div class="kpi-card">
+        <span class="kpi-label" id="kpi-claims-label">Claims</span>
+        <span class="kpi-value" id="kpi-claims-value">--</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label" id="kpi-exposure-label">Exposure</span>
+        <span class="kpi-value" id="kpi-exposure-value">--</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label" id="kpi-lr-label">Loss Ratio</span>
+        <span class="kpi-value" id="kpi-lr-value">--</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label" id="kpi-severity-label">Avg Severity</span>
+        <span class="kpi-value" id="kpi-severity-value">--</span>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Claim Frequency by Year</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Frecuencia de Siniestros por Año</h3>
+            <p class="chart-card-desc" data-lang="en">Claims per exposure unit. An upward trend means more claims per policy-year.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Siniestros por unidad de exposición. Una tendencia al alza significa más siniestros por póliza-año.</p>
+        </div>
+        <div id="freq-chart" class="chart-skeleton" style="height:340px;"></div>
+    </div>
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Pure Premium (MXN) by Year</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Prima Pura (MXN) por Año</h3>
+            <p class="chart-card-desc" data-lang="en">Expected claim cost per exposure unit, the minimum premium needed to break even before expenses.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Costo esperado de siniestros por unidad de exposición, la prima mínima para alcanzar punto de equilibrio.</p>
+        </div>
+        <div id="premium-chart" class="chart-skeleton" style="height:340px;"></div>
+    </div>
+</div>
+
+<div class="chart-card">
+    <div class="chart-card-header">
+        <h3 class="chart-card-title" data-lang="en">Loss Ratio by Coverage Type</h3>
+        <h3 class="chart-card-title hidden" data-lang="es">Razón de Pérdida por Tipo de Cobertura</h3>
+        <p class="chart-card-desc" data-lang="en">Paid losses divided by earned premium for the latest selected year. Above 100% = underwriting loss.</p>
+        <p class="chart-card-desc hidden" data-lang="es">Pérdidas pagadas entre prima devengada del último año seleccionado. Arriba de 100% = pérdida técnica.</p>
+    </div>
+    <div id="lr-chart" class="chart-skeleton" style="height:340px;"></div>
+</div>
+
+<div id="no-data-warning" class="hidden card p-4 mt-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
+    <span data-lang="en">No data matches the selected filters.</span>
+    <span data-lang="es" class="hidden">Ningún dato coincide con los filtros seleccionados.</span>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if dataset %}
+<script>
+waitForPlotly(function() {
+    var raw = {{ dataset | tojson }};
+    var allRecords = raw.records;
+    var coverages = raw.coverages;
+    var yearMin = raw.year_min;
+    var yearMax = raw.year_max;
+    var cols = raw.columns;
+    var selectedCoverages = new Set(coverages);
+
+    var coverageList = document.getElementById('coverage-list');
+    coverages.forEach(function(c) {
+        var label = document.createElement('label');
+        label.className = 'dropdown-item';
+        label.innerHTML = '<input type="checkbox" checked value="' + c + '" onchange="onCoverageChange()" class="rounded border-slate-300"><span>' + c + '</span>';
+        coverageList.appendChild(label);
+    });
+
+    var minSlider = document.getElementById('year-min');
+    var maxSlider = document.getElementById('year-max');
+    minSlider.min = yearMin; minSlider.max = yearMax; minSlider.value = yearMin;
+    maxSlider.min = yearMin; maxSlider.max = yearMax; maxSlider.value = yearMax;
+
+    window.toggleDropdown = function() { document.getElementById('coverage-options').classList.toggle('hidden'); };
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('coverage-dropdown').contains(e.target))
+            document.getElementById('coverage-options').classList.add('hidden');
+    });
+    window.toggleAllCoverages = function(el) {
+        coverageList.querySelectorAll('input[type=checkbox]').forEach(function(c) { c.checked = el.checked; });
+        applyFilters();
+    };
+    window.onCoverageChange = function() {
+        var checks = coverageList.querySelectorAll('input[type=checkbox]');
+        document.getElementById('coverage-all').checked = Array.from(checks).every(function(c) { return c.checked; });
+        applyFilters();
+    };
+
+    window.applyFilters = function() {
+        selectedCoverages = new Set();
+        coverageList.querySelectorAll('input:checked').forEach(function(c) { selectedCoverages.add(c.value); });
+        var yMin = parseInt(minSlider.value), yMax = parseInt(maxSlider.value);
+        if (yMin > yMax) { var t = yMin; yMin = yMax; yMax = t; }
+
+        document.getElementById('coverage-label').textContent =
+            selectedCoverages.size === coverages.length ? 'All coverages' :
+            selectedCoverages.size === 0 ? 'None' : selectedCoverages.size + ' selected';
+        document.getElementById('year-range-label').textContent = yMin + ' – ' + yMax;
+
+        var filtered = allRecords.filter(function(r) {
+            return selectedCoverages.has(r.coverage_type) && r.year >= yMin && r.year <= yMax;
+        });
+
+        if (filtered.length === 0) { document.getElementById('no-data-warning').classList.remove('hidden'); return; }
+        document.getElementById('no-data-warning').classList.add('hidden');
+
+        var latestYear = Math.max.apply(null, filtered.map(function(r) { return r.year; }));
+        var latest = filtered.filter(function(r) { return r.year === latestYear; });
+        var totalClaims = latest.reduce(function(s, r) { return s + (r.claim_count || 0); }, 0);
+        var totalExposure = latest.reduce(function(s, r) { return s + (r.exposure_years || 0); }, 0);
+        var totalPaid = latest.reduce(function(s, r) { return s + (r.total_paid || 0); }, 0);
+        var totalEarned = latest.reduce(function(s, r) { return s + (r.earned_premium || 0); }, 0);
+        var lr = totalEarned > 0 ? totalPaid / totalEarned : null;
+        var sev = totalClaims > 0 ? totalPaid / totalClaims : null;
+
+        document.getElementById('kpi-claims-label').textContent = 'Claims (' + latestYear + ')';
+        document.getElementById('kpi-claims-value').textContent = totalClaims.toLocaleString();
+        document.getElementById('kpi-exposure-label').textContent = 'Exposure (' + latestYear + ')';
+        document.getElementById('kpi-exposure-value').textContent = totalExposure.toLocaleString(undefined, {maximumFractionDigits:1});
+        document.getElementById('kpi-lr-label').textContent = 'Loss Ratio (' + latestYear + ')';
+        document.getElementById('kpi-lr-value').textContent = lr !== null ? (lr * 100).toFixed(1) + '%' : 'N/A';
+        document.getElementById('kpi-severity-label').textContent = 'Avg Severity (' + latestYear + ')';
+        document.getElementById('kpi-severity-value').textContent = sev !== null ? '$' + Math.round(sev).toLocaleString() : 'N/A';
+
+        var P = window.DashboardPlotly, base = P.baseLayout, cfg = P.config, pal = P.palette;
+        var byCov = {};
+        filtered.forEach(function(r) { if (!byCov[r.coverage_type]) byCov[r.coverage_type] = []; byCov[r.coverage_type].push(r); });
+
+        ['freq-chart','premium-chart','lr-chart'].forEach(function(id) { document.getElementById(id).classList.remove('chart-skeleton'); });
+
+        if (cols.indexOf('claim_frequency') !== -1) {
+            var traces = Object.keys(byCov).map(function(name, i) {
+                var rows = byCov[name];
+                return { x: rows.map(function(r){return r.year;}), y: rows.map(function(r){return r.claim_frequency;}), name: name, type:'scatter', mode:'lines+markers', marker:{size:5}, line:{width:2, color:pal[i%pal.length]} };
+            });
+            Plotly.react('freq-chart', traces, { ...base, height:340, xaxis:{...base.xaxis, dtick:1}, yaxis:{...base.yaxis, title:'Frequency'}, legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:11}} }, cfg);
+        }
+        if (cols.indexOf('pure_premium') !== -1) {
+            var traces2 = Object.keys(byCov).map(function(name, i) {
+                var rows = byCov[name];
+                return { x: rows.map(function(r){return r.year;}), y: rows.map(function(r){return r.pure_premium;}), name: name, type:'scatter', mode:'lines+markers', marker:{size:5}, line:{width:2, color:pal[i%pal.length]} };
+            });
+            Plotly.react('premium-chart', traces2, { ...base, height:340, xaxis:{...base.xaxis, dtick:1}, yaxis:{...base.yaxis, title:'Pure Premium (MXN)', tickformat:',.0f'}, legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:11}} }, cfg);
+        }
+        if (cols.indexOf('loss_ratio') !== -1) {
+            var sorted = latest.slice().sort(function(a,b){return (b.loss_ratio||0)-(a.loss_ratio||0);});
+            Plotly.react('lr-chart', [{ x:sorted.map(function(r){return r.coverage_type;}), y:sorted.map(function(r){return r.loss_ratio;}), type:'bar', marker:{color:sorted.map(function(_,i){return pal[i%pal.length];}), cornerradius:3}, text:sorted.map(function(r){return r.loss_ratio!=null?(r.loss_ratio*100).toFixed(0)+'%':'';}), textposition:'outside', hovertemplate:'%{x}: %{y:.1%}<extra></extra>' }],
+            { ...base, height:340, showlegend:false, xaxis:{...base.xaxis}, yaxis:{...base.yaxis, title:'Loss Ratio', tickformat:'.0%'} }, cfg);
+        }
+    };
+    applyFilters();
+});
+</script>
+{% endif %}
+{% endblock %}

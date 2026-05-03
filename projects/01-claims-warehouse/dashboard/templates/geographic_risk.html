@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Geographic Risk -- Claims Analytics{% endblock %}
+{% block page_title %}
+<span data-lang="en">Geographic Risk Concentration</span>
+<span data-lang="es" class="hidden">Concentración de Riesgo Geográfico</span>
+{% endblock %}
+
+{% block content %}
+<p class="section-context mb-5" data-lang="en">
+    Maps claim volume and severity across Mexico's 32 states. <strong>High-concentration states</strong>
+    drive a disproportionate share of losses and may need adjusted pricing, underwriting limits, or
+    reinsurance protection. The bar chart color gradient shows average severity; darker red
+    means costlier claims, not just more of them.
+</p>
+<p class="section-context mb-5 hidden" data-lang="es">
+    Mapea el volumen y la severidad de siniestros en los 32 estados de México. Los
+    <strong>estados con alta concentración</strong> generan una parte desproporcionada de las pérdidas
+    y pueden requerir ajustes en tarificación, límites de suscripción o protección de reaseguro.
+    El gradiente de color de las barras muestra la severidad promedio; rojo más oscuro significa
+    siniestros más costosos, no solo más frecuentes.
+</p>
+
+{% if error %}
+<div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
+    Could not load geographic data. {{ error }}
+</div>
+{% endif %}
+
+{% if dataset %}
+<!-- Filters -->
+<div class="card p-4 mb-5">
+    <div class="flex flex-wrap items-end gap-4">
+        <div class="flex-1 min-w-[180px]">
+            <label class="filter-label" data-lang="en">Accident Year Range</label>
+            <label class="filter-label hidden" data-lang="es">Rango de Año de Ocurrencia</label>
+            <div class="flex items-center gap-3">
+                <input type="range" id="geo-year-min" class="flex-1" onchange="applyGeoFilters()">
+                <span id="geo-year-label" class="text-sm font-medium text-slate-700 whitespace-nowrap min-w-[70px] text-center"></span>
+                <input type="range" id="geo-year-max" class="flex-1" onchange="applyGeoFilters()">
+            </div>
+        </div>
+        <div class="flex-1 min-w-[180px]">
+            <label class="filter-label" data-lang="en">States (empty = all)</label>
+            <label class="filter-label hidden" data-lang="es">Estados (vacío = todos)</label>
+            <div class="relative" id="state-dropdown">
+                <button type="button" onclick="toggleStateDropdown()" class="filter-select w-full text-left">
+                    <span id="state-label">All states</span>
+                    <svg class="w-4 h-4 text-slate-400 ml-auto" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+                </button>
+                <div id="state-options" class="dropdown-menu hidden max-h-56 overflow-auto">
+                    <div id="state-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="grid grid-cols-3 gap-3 mb-5">
+    <div class="kpi-card">
+        <span class="kpi-label" data-lang="en">States with Claims</span>
+        <span class="kpi-label hidden" data-lang="es">Estados con Siniestros</span>
+        <span class="kpi-value" id="geo-kpi-states">--</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label" data-lang="en">Total Claims</span>
+        <span class="kpi-label hidden" data-lang="es">Siniestros Totales</span>
+        <span class="kpi-value" id="geo-kpi-claims">--</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label" data-lang="en">Total Paid (MXN)</span>
+        <span class="kpi-label hidden" data-lang="es">Total Pagado (MXN)</span>
+        <span class="kpi-value" id="geo-kpi-paid">--</span>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-5 mb-5">
+    <div class="chart-card xl:col-span-3">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Claims by State</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Siniestros por Estado</h3>
+            <p class="chart-card-desc" data-lang="en">Choropleth shading by claim count. Hover for detail.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Sombreado por conteo de siniestros. Pasa el cursor para detalle.</p>
+        </div>
+        <div id="map-chart" class="chart-skeleton" style="height:480px;"></div>
+        <div id="map-fallback" class="hidden p-4 text-center text-sm text-slate-500">
+            <span data-lang="en">Map could not be rendered. See the bar chart for the same ranking.</span>
+            <span data-lang="es" class="hidden">No se pudo renderizar el mapa. Consulta la gráfica de barras para el mismo ranking.</span>
+        </div>
+    </div>
+    <div class="chart-card xl:col-span-2">
+        <div class="chart-card-header">
+            <h3 class="chart-card-title" data-lang="en">Top States by Claim Count</h3>
+            <h3 class="chart-card-title hidden" data-lang="es">Estados con Más Siniestros</h3>
+            <p class="chart-card-desc" data-lang="en">Bar length = claim volume, color intensity = avg severity.</p>
+            <p class="chart-card-desc hidden" data-lang="es">Largo de barra = volumen de siniestros, intensidad de color = severidad promedio.</p>
+        </div>
+        <div id="bar-chart" class="chart-skeleton" style="height:480px;"></div>
+    </div>
+</div>
+
+<div class="chart-card">
+    <div class="chart-card-header">
+        <h3 class="chart-card-title" data-lang="en">State-Level Detail</h3>
+        <h3 class="chart-card-title hidden" data-lang="es">Detalle por Estado</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table" id="geo-table">
+            <thead>
+                <tr data-lang="en"><th>Code</th><th>State</th><th>Claims</th><th>Avg Severity</th><th>Total Paid</th></tr>
+                <tr data-lang="es" class="hidden"><th>Código</th><th>Estado</th><th>Siniestros</th><th>Severidad Promedio</th><th>Total Pagado</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="geo-no-data" class="hidden card p-4 mt-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
+    <span data-lang="en">No data matches the selected filters.</span>
+    <span data-lang="es" class="hidden">Ningún dato coincide con los filtros seleccionados.</span>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if dataset %}
+<script>
+waitForPlotly(function() {
+    var raw = {{ dataset | tojson }};
+    var allRecords = raw.records, states = raw.states, yearMin = raw.year_min, yearMax = raw.year_max, stateNames = raw.state_names;
+    var GEOJSON_URL = 'https://raw.githubusercontent.com/angelnmara/geojson/master/mexicoHigh.json';
+    var geoJsonData = null;
+
+    fetch(GEOJSON_URL).then(function(r){return r.json();}).then(function(d){geoJsonData=d; applyGeoFilters();}).catch(function(){document.getElementById('map-fallback').classList.remove('hidden');});
+
+    var minSlider = document.getElementById('geo-year-min'), maxSlider = document.getElementById('geo-year-max');
+    minSlider.min=yearMin; minSlider.max=yearMax; minSlider.value=yearMin;
+    maxSlider.min=yearMin; maxSlider.max=yearMax; maxSlider.value=yearMax;
+
+    var stateList = document.getElementById('state-list');
+    states.forEach(function(s) {
+        var label = document.createElement('label');
+        label.className = 'dropdown-item';
+        label.innerHTML = '<input type="checkbox" value="'+s+'" onchange="applyGeoFilters()" class="rounded border-slate-300"><span>'+s+' -- '+(stateNames[s]||s)+'</span>';
+        stateList.appendChild(label);
+    });
+
+    window.toggleStateDropdown = function() { document.getElementById('state-options').classList.toggle('hidden'); };
+    document.addEventListener('click', function(e) {
+        if (!document.getElementById('state-dropdown').contains(e.target))
+            document.getElementById('state-options').classList.add('hidden');
+    });
+
+    window.applyGeoFilters = function() {
+        var yMin = parseInt(minSlider.value), yMax = parseInt(maxSlider.value);
+        if (yMin > yMax) { var t=yMin; yMin=yMax; yMax=t; }
+        document.getElementById('geo-year-label').textContent = yMin + ' – ' + yMax;
+
+        var checkedStates = new Set();
+        stateList.querySelectorAll('input:checked').forEach(function(c){checkedStates.add(c.value);});
+        document.getElementById('state-label').textContent = checkedStates.size===0?'All states':checkedStates.size+' selected';
+
+        var filtered = allRecords.filter(function(r){return r.accident_year>=yMin && r.accident_year<=yMax;});
+        if (checkedStates.size > 0) filtered = filtered.filter(function(r){return checkedStates.has(r.state_code);});
+
+        var byState = {};
+        filtered.forEach(function(r) {
+            if (!byState[r.state_code]) byState[r.state_code] = {state_code:r.state_code, state_name:r.state_name||stateNames[r.state_code]||r.state_code, claim_count:0, total_paid:0, sev_sum:0, sev_n:0};
+            var s = byState[r.state_code];
+            s.claim_count += r.claim_count||0;
+            s.total_paid += r.total_paid||0;
+            if (r.avg_severity!=null) { s.sev_sum += r.avg_severity*(r.claim_count||1); s.sev_n += (r.claim_count||1); }
+        });
+        var agg = Object.values(byState).map(function(s){return {...s, avg_severity: s.sev_n>0?s.sev_sum/s.sev_n:0};});
+
+        if (agg.length===0) { document.getElementById('geo-no-data').classList.remove('hidden'); return; }
+        document.getElementById('geo-no-data').classList.add('hidden');
+
+        document.getElementById('geo-kpi-states').textContent = agg.length;
+        document.getElementById('geo-kpi-claims').textContent = agg.reduce(function(s,r){return s+r.claim_count;},0).toLocaleString();
+        document.getElementById('geo-kpi-paid').textContent = '$'+agg.reduce(function(s,r){return s+r.total_paid;},0).toLocaleString(undefined,{maximumFractionDigits:0});
+
+        var base = window.DashboardPlotly.baseLayout, cfg = window.DashboardPlotly.config;
+        document.querySelectorAll('.chart-skeleton').forEach(function(el){el.classList.remove('chart-skeleton');});
+
+        var sortedBar = agg.slice().sort(function(a,b){return a.claim_count-b.claim_count;}).slice(-20);
+        Plotly.react('bar-chart', [{
+            x:sortedBar.map(function(r){return r.claim_count;}), y:sortedBar.map(function(r){return r.state_code;}),
+            type:'bar', orientation:'h',
+            marker:{ color:sortedBar.map(function(r){return r.avg_severity;}), colorscale:[[0,'#FEE2E2'],[0.5,'#EF4444'],[1,'#7F1D1D']], showscale:true, colorbar:{title:'Severity',thickness:10,outlinewidth:0,tickformat:',.0f'}, cornerradius:2 },
+            text:sortedBar.map(function(r){return r.claim_count.toLocaleString();}), textposition:'auto',
+            hovertemplate:'%{y}: %{x:,} claims<extra></extra>',
+        }], { ...base, height:480, showlegend:false, xaxis:{...base.xaxis}, yaxis:{...base.yaxis, categoryorder:'total ascending'}, margin:{l:55,r:16,t:8,b:40} }, cfg);
+
+        if (geoJsonData) {
+            try {
+                Plotly.react('map-chart', [{
+                    type:'choropleth', geojson:geoJsonData,
+                    locations:agg.map(function(r){return r.state_name;}), z:agg.map(function(r){return r.claim_count;}),
+                    featureidkey:'properties.name',
+                    colorscale:[[0,'#EFF6FF'],[0.3,'#93C5FD'],[0.6,'#2563EB'],[1,'#1E3A8A']],
+                    showscale:true, colorbar:{thickness:10,outlinewidth:0,tickformat:',.0f'},
+                    hovertemplate:'%{location}<br>Claims: %{z:,}<extra></extra>',
+                }], { ...base, height:480, geo:{fitbounds:'locations',visible:false,bgcolor:'rgba(0,0,0,0)'}, margin:{l:0,r:0,t:8,b:0} }, cfg);
+                document.getElementById('map-fallback').classList.add('hidden');
+            } catch(e) { document.getElementById('map-fallback').classList.remove('hidden'); }
+        }
+
+        var tbody = document.querySelector('#geo-table tbody');
+        var sortedTbl = agg.slice().sort(function(a,b){return b.total_paid-a.total_paid;});
+        tbody.innerHTML = sortedTbl.map(function(r) {
+            return '<tr><td class="font-medium">'+r.state_code+'</td><td>'+r.state_name+'</td><td>'+r.claim_count.toLocaleString()+'</td><td>$'+Math.round(r.avg_severity).toLocaleString()+'</td><td>$'+Math.round(r.total_paid).toLocaleString()+'</td></tr>';
+        }).join('');
+    };
+    applyGeoFilters();
+});
+</script>
+{% endif %}
+{% endblock %}

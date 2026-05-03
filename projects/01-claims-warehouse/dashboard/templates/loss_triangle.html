@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Loss Triangle -- Claims Analytics{% endblock %}
+{% block page_title %}
+<span data-lang="en">Loss Development Triangle</span>
+<span data-lang="es" class="hidden">Triángulo de Desarrollo de Pérdidas</span>
+{% endblock %}
+
+{% block content %}
+<p class="section-context mb-5" data-lang="en">
+    Each row is an <strong>accident year</strong>, when losses occurred. Columns show how total payments
+    accumulate over <strong>development years</strong>. The blank lower-right corner is
+    <strong>IBNR</strong> (Incurred But Not Reported): future payments the portfolio still owes.
+    Actuaries use the development factors below to project those ultimate costs and set reserves.
+</p>
+<p class="section-context mb-5 hidden" data-lang="es">
+    Cada fila es un <strong>año de ocurrencia</strong>, es decir, cuándo sucedieron los siniestros.
+    Las columnas muestran cómo se acumulan los pagos a lo largo de los <strong>años de desarrollo</strong>.
+    La esquina inferior derecha vacía es <strong>IBNR</strong> (Incurrido Pero No Reportado): pagos futuros
+    que el portafolio aún debe. Los actuarios usan los factores de desarrollo de abajo para proyectar
+    esos costos finales y constituir reservas.
+</p>
+
+{% if error %}
+<div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
+    Could not load loss triangle. {{ error }}
+</div>
+{% endif %}
+
+{% if chart_data %}
+<div class="chart-card mb-5">
+    <div class="chart-card-header">
+        <h3 class="chart-card-title" data-lang="en">Cumulative Paid Losses (MXN)</h3>
+        <h3 class="chart-card-title hidden" data-lang="es">Pérdidas Pagadas Acumuladas (MXN)</h3>
+        <p class="chart-card-desc" data-lang="en">Darker cells = higher cumulative payments. The staircase pattern is expected; older years have had more time to settle.</p>
+        <p class="chart-card-desc hidden" data-lang="es">Celdas más oscuras = pagos acumulados más altos. El patrón escalonado es normal; los años más antiguos han tenido más tiempo para liquidarse.</p>
+    </div>
+    <div id="heatmap-chart" class="w-full chart-skeleton" style="height:420px;"></div>
+</div>
+
+<div class="chart-card">
+    <div class="chart-card-header">
+        <h3 class="chart-card-title" data-lang="en">Development Factors</h3>
+        <h3 class="chart-card-title hidden" data-lang="es">Factores de Desarrollo</h3>
+        <p class="chart-card-desc" data-lang="en">Column-over-column ratios. A factor of 1.50 means losses grew 50% between periods. Factors near 1.00 indicate the year is close to fully settled.</p>
+        <p class="chart-card-desc hidden" data-lang="es">Razones columna sobre columna. Un factor de 1.50 significa que las pérdidas crecieron 50% entre periodos. Factores cercanos a 1.00 indican que el año está casi completamente liquidado.</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="data-table" id="factors-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if chart_data %}
+<script>
+waitForPlotly(function() {
+    var data = {{ chart_data | tojson }};
+    var factors = {{ factors_data | tojson }};
+
+    var el = document.getElementById('heatmap-chart');
+    el.classList.remove('chart-skeleton');
+
+    Plotly.newPlot(el, [{
+        type: 'heatmap',
+        z: data.z, x: data.x, y: data.y,
+        text: data.text, texttemplate: '%{text}',
+        hovertemplate: 'AY %{y}, %{x}: %{z:,.0f} MXN<extra></extra>',
+        colorscale: [[0,'#EFF6FF'],[0.25,'#BFDBFE'],[0.5,'#60A5FA'],[0.75,'#2563EB'],[1,'#1E40AF']],
+        showscale: true,
+        colorbar: { thickness: 12, outlinewidth: 0, tickformat: ',.0f' },
+    }], {
+        ...window.DashboardPlotly.baseLayout,
+        yaxis: { ...window.DashboardPlotly.baseLayout.yaxis, title: 'Accident Year', autorange: 'reversed' },
+        xaxis: { ...window.DashboardPlotly.baseLayout.xaxis, title: '', side: 'top' },
+        height: 420,
+        margin: { l: 70, r: 16, t: 40, b: 16 },
+    }, window.DashboardPlotly.config);
+
+    // Factors table
+    var thead = document.querySelector('#factors-table thead');
+    var tbody = document.querySelector('#factors-table tbody');
+    var hdr = '<tr><th>Accident Year</th>';
+    factors.columns.forEach(function(c) { hdr += '<th>' + c + '</th>'; });
+    thead.innerHTML = hdr + '</tr>';
+
+    factors.y_labels.forEach(function(label, i) {
+        var row = '<tr><td class="font-medium">' + label + '</td>';
+        factors.rows.forEach(function(col) {
+            var v = col[i];
+            row += '<td>' + (v !== null ? v.toFixed(4) : '') + '</td>';
+        });
+        tbody.innerHTML += row + '</tr>';
+    });
+
+    var avg = '<tr class="bg-slate-50 font-semibold"><td>Weighted Avg</td>';
+    factors.weighted_avgs.forEach(function(v) {
+        avg += '<td>' + (v !== null ? v.toFixed(4) : '') + '</td>';
+    });
+    tbody.innerHTML += avg + '</tr>';
+});
+</script>
+{% endif %}
+{% endblock %}

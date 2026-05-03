@@ -1,53 +1,53 @@
 """BigQuery client utilities for the Claims Analytics dashboard.
 
-Provides a cached BigQuery client and a helper function to run SQL queries,
-returning results as pandas DataFrames. Query results are cached for 5 minutes
-to minimise BigQuery costs during interactive exploration.
+Provides a cached BigQuery client and a helper to run SQL queries,
+returning results as pandas DataFrames with a 5-minute TTL cache.
 """
 
+import decimal
 import os
+import time
+from functools import lru_cache
 
 import pandas as pd
-import streamlit as st
 from google.cloud import bigquery
 
-# Cloud Run sets GOOGLE_CLOUD_PROJECT automatically from the service's
-# project; GCP_PROJECT_ID is what CI injects explicitly.  Accept either so
-# a missed CI env-var injection does not take the dashboard down.
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
 if not PROJECT_ID:
     raise RuntimeError(
         "No GCP project configured: set GCP_PROJECT_ID (preferred) or "
         "GOOGLE_CLOUD_PROJECT in the Cloud Run service environment."
     )
+
 DATASET_ANALYTICS = "dev_claims_analytics"
 DATASET_REPORTS = "dev_claims_reports"
 DATASET_RAW = "dev_claims_raw"
 
 
 def _fqn(dataset: str, table: str) -> str:
-    """Return a fully-qualified BigQuery table name with backtick escaping."""
     return f"`{PROJECT_ID}`.`{dataset}`.`{table}`"
 
 
-@st.cache_resource
-def get_bq_client() -> bigquery.Client:
-    """Return a cached BigQuery client bound to the project."""
+@lru_cache(maxsize=1)
+def _get_client() -> bigquery.Client:
     return bigquery.Client(project=PROJECT_ID)
 
 
-@st.cache_data(ttl=300)
-def query_bq(sql: str) -> pd.DataFrame:
-    """Execute *sql* against BigQuery and return a DataFrame.
+_cache: dict[str, tuple[float, pd.DataFrame]] = {}
+_CACHE_TTL = 300
 
-    Results are cached for 300 seconds (5 minutes) so repeated page
-    interactions do not trigger new BigQuery jobs.
-    """
-    client = get_bq_client()
+
+def query_bq(sql: str) -> pd.DataFrame:
+    key = sql.strip()
+    now = time.time()
+    if key in _cache:
+        ts, df = _cache[key]
+        if now - ts < _CACHE_TTL:
+            return df.copy()
+
+    client = _get_client()
     df = client.query(sql).to_dataframe()
-    # BigQuery NUMERIC/DECIMAL columns arrive as Python decimal.Decimal,
-    # which breaks pandas arithmetic and Plotly rendering. Convert to float.
-    import decimal
+
     for col in df.columns:
         if df[col].dtype == object and len(df) > 0:
             sample = df[col].dropna().iloc[0] if not df[col].dropna().empty else None
@@ -55,4 +55,6 @@ def query_bq(sql: str) -> pd.DataFrame:
                 df[col] = df[col].apply(
                     lambda x: float(x) if isinstance(x, decimal.Decimal) else x
                 )
-    return df
+
+    _cache[key] = (now, df)
+    return df.copy()
