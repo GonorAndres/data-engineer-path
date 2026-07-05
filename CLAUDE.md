@@ -132,6 +132,15 @@ gcloud config set project <PROJECT_ID>
 - CI must pass (lint + test) before any deployment. Green CI badge required on root README.
 - Deployment evidence is mandatory: screenshots, terminal output, or logs proving the service ran in GCP -- not just local execution
 
+## Improvement Roadmap
+
+Two expert audits (2026-05-03) live in `subagents_outputs/` and should guide future work:
+
+- **`subagents_outputs/de_expert_audit.md`** -- Data engineering best-practices audit. Covers schema evolution, monitoring, exactly-once semantics, incremental loads, security hardening. Prioritized tier list with time estimates.
+- **`subagents_outputs/portfolio_review.md`** -- Portfolio impact review from a recruiter/hiring-manager perspective. Covers what impresses, what hurts credibility, actionable improvements ranked by impact, future feature roadmap, and recruiter perception by company (Rappi, Kavak, Clip, Nubank, MercadoLibre, FAANG).
+
+When starting new work on this repo, check these documents for context on what to prioritize next.
+
 ## Content Philosophy
 
 This is a **learning-first** repository. Every piece of code and documentation should help the author understand:
