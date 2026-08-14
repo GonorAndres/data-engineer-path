@@ -29,6 +29,9 @@ DEFAULT_REPO_NAME = "claims-warehouse-dataform"
 DEFAULT_ENV = "dev"
 DEFAULT_VALUATION_DATE = "2025-12-31"
 DEFAULT_MAX_BYTES_BILLED = "10737418240"
+DEFAULT_SERVICE_ACCOUNT = (
+    "dev-claims-pipeline-sa@project-ad7a5be2-a1c7-4510-82d.iam.gserviceaccount.com"
+)
 DATAFORM_DIR = Path(__file__).resolve().parent.parent / "dataform"
 POLL_INTERVAL_SECONDS = 10
 MAX_POLL_ATTEMPTS = 60
@@ -286,6 +289,7 @@ def execute_workflow(
     client: object,
     repo_name: str,
     compilation_result_name: str,
+    service_account: str | None = None,
 ) -> str:
     """Create a workflow invocation to execute the compiled Dataform project.
 
@@ -293,17 +297,30 @@ def execute_workflow(
         client: A ``DataformClient`` instance.
         repo_name: Full resource name of the repository.
         compilation_result_name: Resource name of the compilation result.
+        service_account: Service account the workflow runs as. Required when the
+            project enforces strict "act as" checks, which reject an invocation
+            that does not name one ("Service account must be set when strict act
+            as checks are enabled"). The caller needs ``iam.serviceAccounts.actAs``
+            on it, and the account itself needs ``bigquery.dataEditor`` plus
+            ``bigquery.jobUser``.
 
     Returns:
         The full resource name of the workflow invocation.
     """
     dataform = _import_dataform()
 
+    workflow_invocation = dataform.WorkflowInvocation(
+        compilation_result=compilation_result_name,
+    )
+    if service_account:
+        workflow_invocation.invocation_config = dataform.InvocationConfig(
+            service_account=service_account,
+        )
+        log.info("Running workflow as %s", service_account)
+
     request = dataform.CreateWorkflowInvocationRequest(
         parent=repo_name,
-        workflow_invocation=dataform.WorkflowInvocation(
-            compilation_result=compilation_result_name,
-        ),
+        workflow_invocation=workflow_invocation,
     )
 
     invocation = client.create_workflow_invocation(request=request)
@@ -503,6 +520,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=f"Workspace identifier (default: {WORKSPACE_ID}).",
     )
     parser.add_argument(
+        "--service-account",
+        default=DEFAULT_SERVICE_ACCOUNT,
+        help=(
+            "Service account the workflow runs as. Required when the project "
+            f"enforces strict act-as checks (default: {DEFAULT_SERVICE_ACCOUNT})."
+        ),
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Compile only -- do not execute the workflow.",
@@ -566,7 +591,9 @@ def deploy(args: argparse.Namespace) -> None:
         return
 
     # 5. Execute
-    invocation_name = execute_workflow(client, repo_name, compilation_result_name)
+    invocation_name = execute_workflow(
+        client, repo_name, compilation_result_name, args.service_account
+    )
 
     # 6. Poll & summarize
     poll_workflow(client, invocation_name)
