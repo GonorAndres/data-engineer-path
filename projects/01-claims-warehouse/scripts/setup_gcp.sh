@@ -65,13 +65,25 @@ echo "Datasets created."
 # --- 5. Load raw CSVs into BigQuery ---
 echo ""
 echo "--- Loading raw data into BigQuery ---"
-for CSV in policyholders policies claims claim_payments coverages; do
+for CSV in policyholders policies claims claim_payments; do
     bq load --autodetect --source_format=CSV \
         --max_bad_records=0 \
         "${PROJECT_ID}:dev_claims_raw.raw_${CSV}" \
         "gs://${BUCKET_NAME}/raw/${CSV}.csv"
     echo "  raw_${CSV} loaded"
 done
+
+# coverages.csv is reference data: 5 rows, every column a string. Autodetect
+# cannot tell the header from the data at that size, so it silently loads the
+# header as a row and names the columns string_field_0..2. stg_coverages then
+# fails with "Unrecognized name: coverage_type" and takes the 10 downstream
+# models with it. Declare the schema instead.
+bq load --source_format=CSV --skip_leading_rows=1 \
+    --max_bad_records=0 \
+    "${PROJECT_ID}:dev_claims_raw.raw_coverages" \
+    "gs://${BUCKET_NAME}/raw/coverages.csv" \
+    coverage_type:STRING,coverage_category:STRING,description:STRING
+echo "  raw_coverages loaded"
 echo "Raw data loaded."
 
 # --- 6. Set up billing alerts ---
