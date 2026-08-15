@@ -55,6 +55,50 @@ These are the two surfaces used to share this portfolio externally (recruiters, 
 
 **Status key:** `Live`, `Live (internal)`, `Torn down`, `Not deployed`
 
+### Rebuilding the claims warehouse (P01)
+
+The dashboard is a presentation layer over BigQuery. When it renders its shell but every
+panel reports `Not found: Table dev_claims_analytics.fct_claims`, the warehouse is gone,
+not the app -- do not redeploy Cloud Run. This happened on 2026-08-14 with all four
+`dev_claims_*` datasets empty. Nothing was lost: the raw CSVs live in
+`gs://dev-claims-data-<PROJECT_ID>/raw/` and the Dataform repository survives
+independently.
+
+Rebuild in this order. Each step below cost real time to rediscover.
+
+1. **Load the raw layer first.** The `raw_*` models are Dataform `declaration`s -- Dataform
+   reads them and never creates them, so running the workflow against empty
+   `dev_claims_raw` fails at the first staging model. `scripts/setup_gcp.sh` has the loads.
+
+2. **`coverages.csv` needs an explicit schema.** It is 5 rows of reference data, three
+   string columns, ~470 bytes. `--autodetect` cannot separate the header from the data at
+   that size: it loads the header as a row and names the columns `string_field_0..2`.
+   `stg_coverages` then fails with `Unrecognized name: coverage_type` and skips the 10
+   models downstream of it -- one tiny file taking out most of the warehouse. The script
+   declares its schema with `--skip_leading_rows=1`; the other four autodetect fine.
+
+3. **Run the workflow** with `python scripts/deploy_dataform.py --project <PROJECT_ID>`.
+   It needs Application Default Credentials, which `gcloud auth login` does *not* provide
+   -- run `gcloud auth application-default login` separately.
+
+Two IAM facts the API errors do not make obvious:
+
+- The invocation must name a service account or it is rejected with *"Service account must
+  be set when strict act as checks are enabled"*. `deploy_dataform.py` passes
+  `--service-account`, defaulting to `dev-claims-pipeline-sa`, which holds
+  `bigquery.dataEditor` and `bigquery.jobUser`.
+- The Dataform service agent `service-<PROJECT_NUMBER>@gcp-sa-dataform.iam.gserviceaccount.com`
+  needs `roles/iam.serviceAccountTokenCreator` on that account. **It takes roughly two
+  minutes to propagate, and retries before then fail with the identical error** -- which
+  reads exactly like the grant did not work. Wait before concluding anything.
+
+`--dry-run` is not write-free. It still uploads the local `dataform/` tree into
+`deploy-workspace` and compiles; it skips only the BigQuery execution.
+
+A healthy rebuild produces 16 tables across staging, intermediate, analytics and reports
+with every assertion passing. Cost is negligible -- 281 KiB of source CSV, loads unbilled,
+queries far inside the free tier, with `max_bytes_billed` capped at 10 GiB per query.
+
 ### Maintenance rules
 
 - Each `projects/<name>/README.md` **Deployment** section must list its own URL (if any), and that URL must match this registry.
@@ -72,6 +116,8 @@ These are the two surfaces used to share this portfolio externally (recruiters, 
 - **PostHog web analytics** is live on the dashboard. The snippet is baked into Streamlit's static `index.html` at Docker build time by `projects/01-claims-warehouse/dashboard/scripts/patch_streamlit_index.py` (runs inside the `Dockerfile`) -- `st.html` strips `<script>` tags and `st.components.v1.html` scopes to an iframe, neither works for exposing `window.posthog` on the parent page. Token is a public write-only key (`phc_...`), safe to commit; mirrors the `data-analyst-path` portfolio.
 - **Runtime env vars for Cloud Run services** are injected by the deploy jobs via the `env_vars:` input of `google-github-actions/deploy-cloudrun@v2`, not stored on the service. This is load-bearing: the dashboard previously shipped with zero env vars across 3 revisions and crashed at import on a missing `GCP_PROJECT_ID`. The workflow is now the single source of truth -- every new revision ships with the required vars. When adding a new runtime env var, add it to the relevant deploy job's `env_vars` block rather than running `gcloud run services update` manually. Dashboard code (`utils/bq_client.py`) reads `GCP_PROJECT_ID` first, falls back to Google's conventional `GOOGLE_CLOUD_PROJECT`, and raises a clear `RuntimeError` at startup if neither is set -- so a missed CI injection surfaces as an obvious boot-time error, not a silent `KeyError` on every page load.
 - **Scheduled health-check** at `.github/workflows/health-check.yml` pings Public-visibility URLs on a weekly cron and fails on non-200. Only URLs in this registry marked `Public` should be added to that workflow; `Internal` URLs are owner-only and not health-checked from CI.
+- **ruff is pinned, on purpose.** The lint job installed `ruff>=0.4.0` until 2026-08-14, which resolves to whatever is newest when the job runs -- so the gate's verdict tracked ruff's release schedule rather than this repo. 0.16.3 shipped, enabled rules the code predates, and P02 started failing with 10 findings in files untouched since the last green run, blocking an unrelated PR. It is now `ruff==0.15.21`, the newest version all five linted paths pass under. Raise the pin deliberately and fix the findings the new version surfaces in that same PR. Reproduce CI locally with the pinned version, not whatever `pip install ruff` gives you.
+- **Outstanding lint debt in P02.** Those 10 findings in `projects/02-orchestrated-elt/src/` are real and deferred, not resolved: four auto-fixable `I001` import sorts, two `UP045`, one `UP035`, and three `BLE001` blind-except warnings whose fixes change error-handling behaviour. They need their own PR against P02.
 
 ## Conventions
 
