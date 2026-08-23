@@ -121,6 +121,34 @@ A healthy rebuild produces 16 tables across staging, intermediate, analytics and
 with every assertion passing. Cost is negligible -- 281 KiB of source CSV, loads unbilled,
 queries far inside the free tier, with `max_bytes_billed` capped at 10 GiB per query.
 
+### The deploy depends on an Artifact Registry repo Terraform does not manage
+
+On 2026-08-23 the merge of PR #23 produced a **green lint, green tests, and no
+deployment**. Both image pushes failed with `name unknown: Repository
+"data-pipelines" not found`, which made `build` and `build-dashboard` fail, which
+made both deploy jobs *skip*. The run showed as failed, but the failure looked
+like a build problem rather than what it was: the registry the whole pipeline
+pushes to had been deleted out from under it. The live services kept serving
+their previous revisions the entire time, so nothing was visibly broken.
+
+`us-central1-docker.pkg.dev/<PROJECT_ID>/data-pipelines` is created by
+`projects/02-orchestrated-elt/cloud_run/deploy.sh`, which is a manual deploy
+script CI never calls, and it is **not** in P04's Terraform -- the modules are
+bigquery, cloud_run, gcs, iam, pubsub, scheduler, with no artifact_registry. So
+the CI pipeline depended on a one-off bootstrap nobody had written down.
+
+Both build jobs now create it idempotently before pushing. The durable fix is an
+`artifact_registry` module in P04 so the resource is declared where every other
+GCP resource in this platform is declared; until then, the workflow step is what
+stops a deleted registry from silently shipping nothing.
+
+Recreate by hand with:
+
+```bash
+gcloud artifacts repositories create data-pipelines \
+  --repository-format=docker --location=us-central1 --project <PROJECT_ID>
+```
+
 ### Maintenance rules
 
 - Each `projects/<name>/README.md` **Deployment** section must list its own URL (if any), and that URL must match this registry.
