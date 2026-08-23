@@ -151,8 +151,21 @@ queries far inside the free tier, with `max_bytes_billed` capped at 10 GiB per q
   whichever hostname served the page and needs no CORS.
 - **Runtime env vars for Cloud Run services** are injected by the deploy jobs via the `env_vars:` input of `google-github-actions/deploy-cloudrun@v2`, not stored on the service. This is load-bearing: the dashboard previously shipped with zero env vars across 3 revisions and crashed at import on a missing `GCP_PROJECT_ID`. The workflow is now the single source of truth -- every new revision ships with the required vars. When adding a new runtime env var, add it to the relevant deploy job's `env_vars` block rather than running `gcloud run services update` manually. Dashboard code (`utils/bq_client.py`) reads `GCP_PROJECT_ID` first, falls back to Google's conventional `GOOGLE_CLOUD_PROJECT`, and raises a clear `RuntimeError` at startup if neither is set -- so a missed CI injection surfaces as an obvious boot-time error, not a silent `KeyError` on every page load.
 - **Scheduled health-check** at `.github/workflows/health-check.yml` pings Public-visibility URLs on a weekly cron and fails on non-200. Only URLs in this registry marked `Public` should be added to that workflow; `Internal` URLs are owner-only and not health-checked from CI.
-- **ruff is pinned, on purpose.** The lint job installed `ruff>=0.4.0` until 2026-08-14, which resolves to whatever is newest when the job runs -- so the gate's verdict tracked ruff's release schedule rather than this repo. 0.16.3 shipped, enabled rules the code predates, and P02 started failing with 10 findings in files untouched since the last green run, blocking an unrelated PR. It is now `ruff==0.15.21`, the newest version all five linted paths pass under. Raise the pin deliberately and fix the findings the new version surfaces in that same PR. Reproduce CI locally with the pinned version, not whatever `pip install ruff` gives you.
-- **Outstanding lint debt in P02.** Those 10 findings in `projects/02-orchestrated-elt/src/` are real and deferred, not resolved: four auto-fixable `I001` import sorts, two `UP045`, one `UP035`, and three `BLE001` blind-except warnings whose fixes change error-handling behaviour. They need their own PR against P02.
+- **ruff is pinned, on purpose.** The lint job installed `ruff>=0.4.0` until 2026-08-14, which resolves to whatever is newest when the job runs -- so the gate's verdict tracked ruff's release schedule rather than this repo. 0.16.3 shipped, enabled rules the code predates, and P02 started failing with 10 findings in files untouched since the last green run, blocking an unrelated PR. It is now `ruff==0.16.4`, raised from 0.15.21 with every finding it surfaced fixed in the same PR. Keep doing it that way, and reproduce CI locally with the pinned version rather than whatever `pip install ruff` gives you.
+- **P02 lint debt is cleared.** The nine mechanical findings were auto-fixed. Of the three
+  `BLE001` blind-excepts, only one was a real defect: `_row_counts_for_layer` in `assets.py`
+  swallowed the exception into a `-1` sentinel with no trace, so a missing table and a
+  permissions error looked identical in the Dagster UI. It logs with `exc_info` now, and
+  ruff stops flagging BLE001 once the error goes somewhere, so that site needs no `noqa`.
+  The two in `runner.py` keep their broad catch behind a `noqa` with the reason written
+  next to it: `execute_sql_layer` returns partial results plus the list of files that
+  failed, and `run_full_pipeline` is the outermost boundary that turns any failure into a
+  reportable result. Narrowing either would change the contract the project is built on.
+- **What is still not linted at all:** CI runs ruff over `projects/0X/src/` only. The
+  dashboard under `projects/01-claims-warehouse/dashboard/` is the one public-facing
+  service in the repo and no lint job touches it. Four findings sit there, one of them the
+  minified PostHog loader line, which cannot be shortened and would need a per-file ignore.
+  Closing the gap also means a `ruff format` pass over `main.py`. Worth its own PR.
 
 ## Conventions
 
