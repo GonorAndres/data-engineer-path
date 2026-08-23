@@ -21,7 +21,7 @@
         <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">How this platform got its shape</h2>
         <p class="section-context mb-3">Insurance claims are not paid all at once. One opened in 2021 is still being paid out in 2024, so if you want to know how much of that year is still owed, there is nowhere to look it up. Somebody has to build the answer. That is the question written on the card above, and building answers like it is what everything here exists to do.</p>
         <p class="section-context mb-3">Six pieces sit underneath. One keeps the claims and reshapes them into tables people can actually ask questions of. One runs that reshaping on a schedule, unattended. One takes claims in as they happen instead of waiting for the nightly run. One writes down every server and database as a file, so the whole thing can be rebuilt from that file rather than from memory. One handles a continuous stream of incoming events, including the ones that turn up late. And one estimates what a policy ought to cost, given who is buying it.</p>
-        <p class="section-context">I trained as an actuary, so I knew what these numbers were supposed to mean before I had to decide where they would live. That is most of what this page is about. Every claim in it points at a file you can open, and wherever I chose one tool over another I have tried to say what would make me choose differently.</p>
+        <p class="section-context">I trained as an actuary, so I knew what these numbers were supposed to mean before I had to decide where they would live. That is most of what this page is about. And because a number nobody can reproduce is a number nobody can defend, a good part of what follows is simply proof of where each one came from. Every claim here points at a file you can open, and wherever I chose one tool over another I have tried to say what would make me choose differently.</p>
     </div>
 </div>
 
@@ -315,23 +315,92 @@
 
 <!-- 5. Governance -->
 <h3 id="en-what-governance-means-here" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">What Governance Means Here</h3>
-<p class="section-context mb-3">
-    Governance in a portfolio project usually means a paragraph promising it. These are the parts that
-    actually run, and what each one is defending against.
-</p>
-<div class="card p-4 mb-6">
-    <ul class="space-y-3.5 text-[13px] text-slate-600">
-        <li><strong class="text-slate-800">Assertions are contracts, not tests</strong> &mdash; they execute inside the same Dataform workflow that builds the tables, so a violated assumption stops its dependents instead of being discovered in a report. Three dedicated assertion models plus uniqueness and non-null declarations on staging and marts.</li>
-        <li><strong class="text-slate-800">One service account, six named roles</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.dataEditor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.jobUser</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">storage.objectAdmin</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">pubsub.editor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">run.invoker</code>, and <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">iam.serviceAccountTokenCreator</code>, which Dataform needs in order to execute a workflow as that account. No Owner, no Editor, nothing granted because it was faster.</li>
-        <li><strong class="text-slate-800">No service account keys exist</strong> &mdash; CI authenticates through Workload Identity Federation, bound to this specific GitHub repository. There is no credential file to leak, rotate, or accidentally commit.</li>
-        <li><strong class="text-slate-800">Cost is bounded structurally</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">max_bytes_billed</code> caps any Dataform query at 10&nbsp;GiB, so a bad join fails instead of billing. Partitioning and clustering do the rest, and the dashboard caches query results for five minutes rather than re-scanning per visitor.</li>
-        <li><strong class="text-slate-800">Environments separate by prefix, from one variable</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_claims_*</code> against <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">claims_*</code>, resolved in each model's config. Promotion is a variable change, not a second copy of the SQL.</li>
-        <li><strong class="text-slate-800">Deploys are canaries</strong> &mdash; each revision ships with no traffic and a tag, gets smoke-tested on its own URL for content rather than a 200, and only then takes traffic. A failed check leaves the previous revision serving, so there is nothing to roll back.</li>
-        <li><strong class="text-slate-800">The health check closes its own issue</strong> &mdash; a daily job asserts the site is up, BigQuery is connected, and the old URLs still redirect. Failure opens a GitHub issue; the next green run closes it. An open issue therefore means broken now, not broken once.</li>
+<p class="section-context mb-3">If somebody asks how a figure on this dashboard was produced &mdash; an auditor, a regulator, a colleague, or you in eight months &mdash; you have to be able to show them, step by step, and get the same number again. Everything below exists for that, and each part is defending against something specific.</p>
+<div class="card p-5 mb-4 overflow-x-auto">
+    <svg viewBox="0 0 900 196" class="w-full min-w-[760px]" style="max-height:210px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="100" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">The data arrives</text>
+        <text x="100" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">loaded from files by a script</text>
+        <path d="M100 56 L100 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap)"/>
+        <rect x="0" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="100" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">A bad file cannot quietly</text>
+        <text x="100" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">become a number</text>
+        <path d="M204 27 L227 27" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#govflow)"/>
+        <rect x="233" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="333" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">It is checked</text>
+        <text x="333" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">before anything is built on it</text>
+        <path d="M333 56 L333 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap)"/>
+        <rect x="233" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="333" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">A duplicated payment cannot</text>
+        <text x="333" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">inflate a reserve</text>
+        <path d="M437 27 L460 27" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#govflow)"/>
+        <rect x="466" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="566" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">It is built in steps</text>
+        <text x="566" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">each step names its inputs</text>
+        <path d="M566 56 L566 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap)"/>
+        <rect x="466" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="566" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">Any figure can be traced</text>
+        <text x="566" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">back to where it came from</text>
+        <path d="M670 27 L693 27" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#govflow)"/>
+        <rect x="699" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="799" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">It is published</text>
+        <text x="799" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">tested before anyone sees it</text>
+        <path d="M799 56 L799 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap)"/>
+        <rect x="699" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="799" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">A broken page cannot</text>
+        <text x="799" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">reach a reader</text>
+        <rect x="0" y="152" width="899" height="42" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+        <text x="450" y="170" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">Every one of these steps is a file kept under version control</text>
+        <text x="450" y="186" text-anchor="middle" font-size="9.5" fill="#94A3B8">so a change to how a reserve is calculated is a dated, authored, reviewed commit</text>
+        <defs>
+            <marker id="govmap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#CBD5E1"/></marker>
+            <marker id="govflow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker>
+        </defs>
+    </svg>
+</div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">Can you show where a number came from?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Each step names its own inputs</strong> &mdash; so the path from a figure on this screen back to the file it came from is something the tool draws for you, not something you reconstruct by reading SQL. In practice that is what <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">ref()</code> buys.</li>
+        <li><strong class="text-slate-800">The whole thing rebuilds from the original files</strong> &mdash; and the procedure is written down. That is not theoretical: on 14 August 2026 every dataset was empty, and it was rebuilt from the raw files in one afternoon.</li>
+        <li><strong class="text-slate-800">Every calculation is a file under version control</strong> &mdash; so a change to how a reserve is worked out carries a date, an author and a reason. The live branch only accepts changes through a reviewed pull request with passing checks.</li>
     </ul>
 </div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">Can you trust what went in?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Checks run as part of building, not afterwards</strong> &mdash; so a broken assumption stops the tables that depend on it instead of turning up later in a report. Sixteen of them, on uniqueness, missing values, referential integrity, and dates that cannot be right.</li>
+        <li><strong class="text-slate-800">This is an actuarial obligation, not a preference</strong> &mdash; ASOP No. 23, <em>Data Quality</em>, requires the actuary to review data for appropriateness and to disclose its limitations rather than assume it is fit for the purpose. These checks are that review, written down once and re-run on every build.</li>
+    </ul>
+</div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">Who is allowed to change what?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">One account, six named permissions</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.dataEditor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.jobUser</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">storage.objectAdmin</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">pubsub.editor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">run.invoker</code>, and <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">iam.serviceAccountTokenCreator</code>. No Owner, no Editor, nothing granted because it was faster.</li>
+        <li><strong class="text-slate-800">There are no passwords or keys to leak</strong> &mdash; the automation proves who it is through a trust relationship tied to this specific repository, so there is no credential file that can be copied, committed, or forgotten.</li>
+        <li><strong class="text-slate-800">Development and production are separate by construction</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_claims_*</code> against <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">claims_*</code>, resolved from one variable in each model. Promoting is a variable change, not a second copy of the logic.</li>
+    </ul>
+</div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">Would you know if it broke?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">New versions are tested before they take traffic</strong> &mdash; each one goes out with no visitors routed to it, gets checked on its own private address for real content rather than a 200, and only then takes over. If the check fails, the previous version never stopped serving.</li>
+        <li><strong class="text-slate-800">A daily check opens an issue, and closes it</strong> &mdash; it confirms the site answers, the warehouse is connected, and the old links still redirect. An open issue therefore means broken now, not broken once.</li>
+        <li><strong class="text-slate-800">A runaway query fails instead of billing</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">max_bytes_billed</code> caps any single query at 10&nbsp;GiB, and the tables are partitioned and clustered so the ordinary questions read a fraction of the data.</li>
+    </ul>
+</div>
+<div class="card p-4 mb-6 border-slate-300">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">What governance here is still missing</span>
+    <p class="text-[13px] text-slate-600 leading-relaxed mb-2.5">Saying so is part of the practice: the same standard that requires reviewing the data requires disclosing what it cannot support.</p>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Last December&rsquo;s reserve cannot be reproduced exactly as it stood</strong> &mdash; policy records are overwritten when they change, so the history they had at the time is gone. For the questions on this dashboard that is fine. For an audit it would not be.</li>
+        <li><strong class="text-slate-800">The pricing model has no formal governance</strong> &mdash; no challenger model, no monitoring for drift as the book changes, no documented review. The fitted coefficients are inspectable, which is the floor, not the standard.</li>
+        <li><strong class="text-slate-800">The infrastructure description is not enforced automatically</strong> &mdash; a person notices if the written definition and the live project drift apart.</li>
+        <li><strong class="text-slate-800">There is no catalogue or glossary</strong> &mdash; what a column means lives in the model that builds it and on this page, which works for one author and stops working for four.</li>
+    </ul>
+    <p class="text-[13px] text-slate-500 leading-relaxed mt-3">Each is stated in full under <a href="#en-what-this-deliberately-does-not-do" class="underline hover:text-slate-700">What This Deliberately Does Not Do</a>.</p>
+</div>
 
-<!-- 6. GCP choices -->
 <h3 id="en-google-cloud-choices-and-the-case-for-" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Google Cloud Choices, and the Case for the Other One</h3>
 <p class="section-context mb-3">
     A decision is only worth recording with the conditions that would reverse it. These are the four
@@ -426,7 +495,7 @@
         <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">Cómo esta plataforma tomó su forma</h2>
         <p class="section-context mb-3">Los siniestros no se pagan de una sola vez. Uno abierto en 2021 se sigue pagando en 2024, así que si quieres saber cuánto de ese año todavía se debe, no hay dónde consultarlo. Alguien tiene que construir la respuesta. Esa es la pregunta escrita en la tarjeta de arriba, y construir respuestas como esa es para lo que existe todo esto.</p>
         <p class="section-context mb-3">Debajo hay seis piezas. Una guarda los siniestros y los reacomoda en tablas a las que la gente pueda hacerles preguntas. Otra ejecuta ese reacomodo en un horario fijo, sin que nadie la vigile. Otra recibe los siniestros conforme ocurren, en lugar de esperar al proceso de la noche. Otra deja escrito en un archivo cada servidor y cada base de datos, para que todo se pueda reconstruir desde ahí y no desde la memoria de alguien. Otra procesa un flujo continuo de eventos, incluidos los que llegan tarde. Y la última estima cuánto debería costar una póliza según quién la está comprando.</p>
-        <p class="section-context">Estudié actuaría, así que sabía qué debían significar estos números antes de tener que decidir dónde iban a vivir. De eso trata casi toda esta página. Cada afirmación apunta a un archivo que puedes abrir, y donde elegí una herramienta sobre otra intenté decir qué me haría elegir distinto.</p>
+        <p class="section-context">Estudié actuaría, así que sabía qué debían significar estos números antes de tener que decidir dónde iban a vivir. De eso trata casi toda esta página. Y como un número que nadie puede reproducir es un número que nadie puede defender, buena parte de lo que sigue es simplemente la prueba de dónde salió cada uno. Cada afirmación apunta a un archivo que puedes abrir, y donde elegí una herramienta sobre otra intenté decir qué me haría elegir distinto.</p>
     </div>
 </div>
 
@@ -721,23 +790,92 @@
 
 <!-- 5. Gobierno -->
 <h3 id="es-que-significa-gobierno-de-datos-aqui" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Qué Significa Gobierno de Datos Aquí</h3>
-<p class="section-context mb-3">
-    En un proyecto de portafolio, gobierno de datos suele significar un párrafo prometiéndolo. Estas son
-    las piezas que realmente corren, y contra qué protege cada una.
-</p>
-<div class="card p-4 mb-6">
-    <ul class="space-y-3.5 text-[13px] text-slate-600">
-        <li><strong class="text-slate-800">Las validaciones son contratos, no pruebas</strong> &mdash; se ejecutan dentro del mismo workflow de Dataform que construye las tablas, así que un supuesto roto detiene a sus dependientes en lugar de descubrirse en un reporte. Tres modelos de validación dedicados más las declaraciones de unicidad y campos obligatorios en staging y marts.</li>
-        <li><strong class="text-slate-800">Una cuenta de servicio, seis roles con nombre</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.dataEditor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.jobUser</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">storage.objectAdmin</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">pubsub.editor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">run.invoker</code> y <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">iam.serviceAccountTokenCreator</code>, que Dataform necesita para ejecutar un workflow como esa cuenta. Nada de Owner, nada de Editor, nada otorgado porque era más rápido.</li>
-        <li><strong class="text-slate-800">No existe ninguna llave de cuenta de servicio</strong> &mdash; CI se autentica con Workload Identity Federation, amarrado a este repositorio de GitHub en específico. No hay archivo de credenciales que se pueda filtrar, rotar ni subir por accidente.</li>
-        <li><strong class="text-slate-800">El costo está acotado por diseño</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">max_bytes_billed</code> limita cualquier consulta de Dataform a 10&nbsp;GiB, de modo que un join mal escrito falla en vez de facturar. La partición y el clustering hacen el resto, y el dashboard cachea resultados cinco minutos en lugar de re-escanear por cada visitante.</li>
-        <li><strong class="text-slate-800">Los ambientes se separan por prefijo, desde una variable</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_claims_*</code> contra <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">claims_*</code>, resuelto en la configuración de cada modelo. Promover es cambiar una variable, no mantener una segunda copia del SQL.</li>
-        <li><strong class="text-slate-800">Los despliegues son canarios</strong> &mdash; cada revisión sale sin tráfico y con etiqueta, se prueba en su propia URL verificando contenido y no solo un 200, y apenas entonces recibe tráfico. Si la prueba falla, la revisión anterior sigue sirviendo, así que no hay nada que revertir.</li>
-        <li><strong class="text-slate-800">El health check cierra su propio issue</strong> &mdash; un job diario verifica que el sitio responda, que BigQuery esté conectado y que las URLs viejas sigan redirigiendo. Si falla abre un issue en GitHub; la siguiente corrida en verde lo cierra. Un issue abierto significa entonces roto ahora, no roto alguna vez.</li>
+<p class="section-context mb-3">Si alguien pregunta cómo se produjo una cifra de este dashboard &mdash; un auditor, un regulador, un colega, o tú mismo en ocho meses &mdash; tienes que poder mostrárselo paso por paso y llegar otra vez al mismo número. Todo lo de abajo existe para eso, y cada parte protege contra algo concreto.</p>
+<div class="card p-5 mb-4 overflow-x-auto">
+    <svg viewBox="0 0 900 196" class="w-full min-w-[760px]" style="max-height:210px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="100" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Llegan los datos</text>
+        <text x="100" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">cargados desde archivos por un script</text>
+        <path d="M100 56 L100 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap-es)"/>
+        <rect x="0" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="100" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">Un archivo malo no se vuelve</text>
+        <text x="100" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">un número en silencio</text>
+        <path d="M204 27 L227 27" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#govflow-es)"/>
+        <rect x="233" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="333" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Se revisan</text>
+        <text x="333" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">antes de construir nada encima</text>
+        <path d="M333 56 L333 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap-es)"/>
+        <rect x="233" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="333" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">Un pago duplicado no puede</text>
+        <text x="333" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">inflar una reserva</text>
+        <path d="M437 27 L460 27" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#govflow-es)"/>
+        <rect x="466" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="566" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Se construye por pasos</text>
+        <text x="566" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">cada paso declara sus insumos</text>
+        <path d="M566 56 L566 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap-es)"/>
+        <rect x="466" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="566" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">Cualquier cifra se puede rastrear</text>
+        <text x="566" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">hasta su origen</text>
+        <path d="M670 27 L693 27" stroke="#94A3B8" stroke-width="1.4" marker-end="url(#govflow-es)"/>
+        <rect x="699" y="0" width="200" height="54" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="799" y="24" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Se publica</text>
+        <text x="799" y="41" text-anchor="middle" font-size="9.5" fill="#94A3B8">probado antes de que alguien lo vea</text>
+        <path d="M799 56 L799 74" stroke="#CBD5E1" stroke-width="1.4" marker-end="url(#govmap-es)"/>
+        <rect x="699" y="80" width="200" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <text x="799" y="101" text-anchor="middle" font-size="9.5" fill="#065F46">Una página rota no</text>
+        <text x="799" y="116" text-anchor="middle" font-size="9.5" fill="#065F46">llega a nadie</text>
+        <rect x="0" y="152" width="899" height="42" rx="8" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+        <text x="450" y="170" text-anchor="middle" font-size="10" font-weight="600" fill="#475569">Cada uno de estos pasos es un archivo versionado</text>
+        <text x="450" y="186" text-anchor="middle" font-size="9.5" fill="#94A3B8">así que un cambio en cómo se calcula una reserva es un commit con fecha, autor y revisión</text>
+        <defs>
+            <marker id="govmap-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#CBD5E1"/></marker>
+            <marker id="govflow-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker>
+        </defs>
+    </svg>
+</div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">¿Puedes mostrar de dónde salió un número?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Cada paso declara sus propios insumos</strong> &mdash; así que el camino desde una cifra en esta pantalla hasta el archivo del que salió es algo que la herramienta dibuja sola, no algo que reconstruyes leyendo SQL. En la práctica, eso es lo que compra <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">ref()</code>.</li>
+        <li><strong class="text-slate-800">Todo se reconstruye desde los archivos originales</strong> &mdash; y el procedimiento está escrito. No es teoría: el 14 de agosto de 2026 todos los conjuntos de datos aparecieron vacíos y se reconstruyeron desde los archivos crudos en una tarde.</li>
+        <li><strong class="text-slate-800">Cada cálculo es un archivo versionado</strong> &mdash; así que un cambio en cómo se calcula una reserva trae fecha, autor y motivo. La rama en vivo solo acepta cambios por pull request revisado y con las validaciones en verde.</li>
     </ul>
 </div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">¿Puedes confiar en lo que entró?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Las revisiones corren al construir, no después</strong> &mdash; así que un supuesto roto detiene a las tablas que dependen de él en vez de aparecer más tarde en un reporte. Son dieciséis: unicidad, campos vacíos, integridad referencial y fechas que no pueden ser correctas.</li>
+        <li><strong class="text-slate-800">Esto es una obligación actuarial, no una preferencia</strong> &mdash; El ASOP No. 23, <em>Data Quality</em>, exige que el actuario revise la información y declare sus limitaciones, en vez de suponer que sirve para el propósito. Estas revisiones son exactamente eso, escritas una vez y ejecutadas en cada construcción.</li>
+    </ul>
+</div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">¿Quién puede cambiar qué?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Una cuenta, seis permisos con nombre</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.dataEditor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.jobUser</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">storage.objectAdmin</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">pubsub.editor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">run.invoker</code> y <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">iam.serviceAccountTokenCreator</code>. Nada de Owner, nada de Editor, nada otorgado porque era más rápido.</li>
+        <li><strong class="text-slate-800">No hay contraseñas ni llaves que se puedan filtrar</strong> &mdash; la automatización demuestra quién es mediante una relación de confianza atada a este repositorio, así que no existe un archivo de credenciales que se pueda copiar, subir por error u olvidar.</li>
+        <li><strong class="text-slate-800">Desarrollo y producción están separados por construcción</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_claims_*</code> contra <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">claims_*</code>, resuelto desde una variable en cada modelo. Promover es cambiar esa variable, no mantener una segunda copia de la lógica.</li>
+    </ul>
+</div>
+<div class="card p-4 mb-4">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">¿Te enterarías si se rompe?</span>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Las versiones nuevas se prueban antes de recibir tráfico</strong> &mdash; cada una sale sin visitantes dirigidos a ella, se revisa en su propia dirección privada buscando contenido real y no un 200, y apenas entonces toma el relevo. Si la revisión falla, la versión anterior nunca dejó de servir.</li>
+        <li><strong class="text-slate-800">Una revisión diaria abre un issue, y lo cierra</strong> &mdash; confirma que el sitio responde, que el almacén está conectado y que los enlaces viejos siguen redirigiendo. Un issue abierto significa entonces roto ahora, no roto alguna vez.</li>
+        <li><strong class="text-slate-800">Una consulta desbocada falla en vez de facturar</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">max_bytes_billed</code> limita cualquier consulta a 10&nbsp;GiB, y las tablas están particionadas y agrupadas para que las preguntas habituales lean una fracción de los datos.</li>
+    </ul>
+</div>
+<div class="card p-4 mb-6 border-slate-300">
+    <span class="block text-[13px] font-semibold text-slate-900 mb-2.5">Qué le falta al gobierno de datos aquí</span>
+    <p class="text-[13px] text-slate-600 leading-relaxed mb-2.5">Decirlo es parte de la práctica: el mismo estándar que exige revisar la información exige declarar lo que no puede sostener.</p>
+    <ul class="space-y-3 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">La reserva de diciembre pasado no se puede reproducir tal como estaba</strong> &mdash; los registros de pólizas se sobrescriben al cambiar, así que la historia que tenían en ese momento ya no existe. Para las preguntas de este dashboard alcanza. Para una auditoría no.</li>
+        <li><strong class="text-slate-800">El modelo de pricing no tiene gobierno formal</strong> &mdash; no hay modelo retador, no hay monitoreo de deriva conforme cambia la cartera, no hay revisión documentada. Los coeficientes se pueden inspeccionar, que es el piso y no el estándar.</li>
+        <li><strong class="text-slate-800">La descripción de la infraestructura no se aplica sola</strong> &mdash; si la definición escrita y el proyecto vivo se separan, lo nota una persona.</li>
+        <li><strong class="text-slate-800">No hay catálogo ni glosario</strong> &mdash; qué significa cada columna vive en el modelo que la construye y en esta página, lo que funciona con un autor y deja de funcionar con cuatro.</li>
+    </ul>
+    <p class="text-[13px] text-slate-500 leading-relaxed mt-3">Cada uno se explica completo en <a href="#es-lo-que-deliberadamente-no-hace" class="underline hover:text-slate-700">Lo Que Deliberadamente No Hace</a>.</p>
+</div>
 
-<!-- 6. Decisiones GCP -->
 <h3 id="es-decisiones-de-google-cloud-y-el-argume" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Decisiones de Google Cloud, y el Argumento a Favor de la Otra Opción</h3>
 <p class="section-context mb-3">
     Una decisión solo vale la pena documentarla junto con las condiciones que la revertirían. Estas son
