@@ -67,9 +67,6 @@
                 <a href="/methodology" class="nav-link {% if active_page == 'methodology' %}active{% endif %}">
                     <span data-lang="en">Methodology</span><span data-lang="es" class="hidden">Metodología</span>
                 </a>
-                <a href="/how-its-built" class="nav-link {% if active_page == 'how_its_built' %}active{% endif %}">
-                    <span data-lang="en">How It's Built</span><span data-lang="es" class="hidden">Cómo Se Construyó</span>
-                </a>
             </nav>
 
             <!-- Language toggle -->
@@ -111,7 +108,7 @@
             </header>
 
             <main class="flex-1 overflow-auto">
-                <div class="p-5 max-w-[1360px] mx-auto">
+                <div class="p-5 max-w-[1360px] mx-auto page-enter">
                     {% block content %}{% endblock %}
                 </div>
             </main>

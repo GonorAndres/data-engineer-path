@@ -1,3 +1,25 @@
+/* ── Motion tokens ─────────────────────────────
+   Every duration and easing in this file comes from here, so the whole
+   dashboard moves at one speed. Three tiers only:
+     fast  -- hover/press feedback
+     med   -- reveals: language swap, dropdowns, charts appearing
+     slow  -- page entrance
+   The reduced-motion block at the END of this file neutralises all of it;
+   source order is what lets it win, so keep it last. */
+
+:root {
+    --dur-fast: 120ms;
+    --dur-med: 200ms;
+    --dur-slow: 280ms;
+    --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+    --focus-ring: #2563EB;
+    --focus-ring-dark: #93C5FD; /* on the #101827 sidebar, #2563EB reads as near-black */
+}
+
+/* The page body never scrolls -- <main> is the scroll container -- so smooth
+   anchor scrolling (the methodology TOC) has to live on both. */
+html, main { scroll-behavior: smooth; }
+
 /* ── Animations ────────────────────────────── */
 
 @keyframes fadeIn {
@@ -5,7 +27,25 @@
     to   { opacity: 1; }
 }
 
-.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+@keyframes riseIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Applied to the content wrapper in base.html. No fill-mode: when the
+   animation ends (or never runs), the element sits at its natural state. */
+.page-enter { animation: riseIn var(--dur-slow) var(--ease-out); }
+
+/* Language crossfade. `hidden` is display:none, which transitions cannot
+   animate across -- but a CSS *animation* restarts whenever an element
+   returns from display:none, so this replays on every toggle with no JS
+   bookkeeping. setLang() adds the class once; the display flip does the rest.
+   Ends at opacity 1, so content can never be left invisible. */
+.lang-enter { animation: fadeIn var(--dur-med) var(--ease-out); }
+
+/* Charts fade in once when Plotly first draws (it adds this class itself).
+   Plotly.react() on filter changes keeps the class, so updates don't blink. */
+.js-plotly-plot { animation: fadeIn var(--dur-med) var(--ease-out); }
 
 @keyframes shimmer {
     0%   { background-position: -400px 0; }
@@ -27,7 +67,8 @@
     height: 2px;
     background: #2563EB;
     z-index: 9999;
-    animation: navProgress 1.2s ease-out forwards;
+    pointer-events: none; /* never intercept clicks in the top 2px strip */
+    animation: navProgress 1.2s var(--ease-out) forwards;
 }
 
 .chart-skeleton {
@@ -35,6 +76,24 @@
     background-size: 800px 100%;
     animation: shimmer 1.4s ease infinite;
     border-radius: 6px;
+}
+
+/* ── Focus visibility ─────────────────────────
+   Keyboard-only rings: :focus-visible stays out of the way on mouse clicks.
+   outline (not box-shadow) so it follows each element's border-radius. */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+aside a:focus-visible,
+aside button:focus-visible {
+    outline-color: var(--focus-ring-dark);
 }
 
 /* ── Sidebar ──────────────────────────────── */
@@ -46,7 +105,7 @@
     font-size: 13px;
     font-weight: 500;
     color: #8896AB;
-    transition: color 0.12s, background 0.12s;
+    transition: color var(--dur-fast), background-color var(--dur-fast);
     text-decoration: none;
 }
 
@@ -59,6 +118,11 @@
     color: #FFFFFF;
     background: rgba(255,255,255,0.08);
 }
+
+/* Fade the mobile drawer's backdrop in. Close stays instant: animating an
+   exit through a class that flips display:none needs JS sequencing, and an
+   instant close reads as responsiveness anyway. */
+#sidebar-overlay:not(.hidden) { animation: fadeIn var(--dur-med) var(--ease-out); }
 
 /* ── Metric strip ─────────────────────────── */
 
@@ -81,6 +145,7 @@
     background: #fff;
     border: 1px solid #E5E7EB;
     border-radius: 8px;
+    transition: border-color var(--dur-fast);
 }
 
 .kpi-card {
@@ -166,6 +231,7 @@
     color: #374151;
     background: #fff;
     cursor: pointer;
+    transition: border-color var(--dur-fast);
 }
 
 .filter-select:hover { border-color: #9CA3AF; }
@@ -181,6 +247,8 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     z-index: 20;
     padding: 4px;
+    /* Restarts on every open: the `hidden` toggle flips display:none. */
+    animation: riseIn var(--dur-fast) var(--ease-out);
 }
 
 .dropdown-item {
@@ -192,6 +260,7 @@
     font-size: 13px;
     color: #374151;
     cursor: pointer;
+    transition: background-color var(--dur-fast);
 }
 
 .dropdown-item:hover { background: #F3F4F6; }
@@ -224,6 +293,7 @@
     white-space: nowrap;
 }
 
+.data-table tbody tr { transition: background-color var(--dur-fast); }
 .data-table tbody tr:hover { background: #F9FAFB; }
 .data-table tbody tr:last-child td { border-bottom: none; }
 
@@ -248,6 +318,16 @@ input[type="range"]::-webkit-slider-thumb {
     box-shadow: 0 0 0 1px #D1D5DB;
 }
 
+/* The `outline: none` above wins over the shared :focus-visible rule at
+   equal specificity, so the keyboard ring for the year sliders needs
+   this heavier selector. The bare `outline: none` stays: it is what
+   keeps the ring off mouse drags, where :focus-visible matching on
+   sliders is browser-inconsistent. */
+input[type="range"]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
 /* ── Scrollbar ────────────────────────────── */
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -263,7 +343,7 @@ input[type="range"]::-webkit-slider-thumb {
     color: #64748B;
     background: transparent;
     cursor: pointer;
-    transition: all 0.12s;
+    transition: color var(--dur-fast), background-color var(--dur-fast);
     border: none;
     letter-spacing: 0.04em;
 }
@@ -279,3 +359,19 @@ input[type="range"]::-webkit-slider-thumb {
 
 .js-plotly-plot .plotly .modebar { right: 4px !important; top: 2px !important; }
 .js-plotly-plot .plotly .modebar-btn { font-size: 13px !important; }
+
+/* ── Reduced motion ────────────────────────────
+   Neutralises everything above, plus Tailwind utilities (the sidebar
+   drawer's transition-transform, animate-pulse on the status dot).
+   Content is never gated on an animation finishing -- every keyframe ends
+   at the element's natural state -- so collapsing durations to near-zero
+   degrades to an instant, fully readable page. Keep this block last. */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    html, main { scroll-behavior: auto; }
+}

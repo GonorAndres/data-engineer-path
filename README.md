@@ -14,8 +14,10 @@ built -- there are no fixtures behind it.
 
 608 synthetic claims across five lines of business and all 32 Mexican states, carried from
 CSV in GCS through staging, intermediate, analytics and report layers in BigQuery.
-[How It's Built](https://data-engineer.gonor.me/how-its-built) walks through the pipeline
-from inside the app, in English and Spanish.
+[Methodology](https://data-engineer.gonor.me/methodology) walks through the whole platform
+from inside the app, in English and Spanish: the six projects, how an actuarial question
+becomes a table, the layering rule, what governance means here, and what it deliberately
+does not do.
 
 ## Platform Architecture
 
