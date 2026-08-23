@@ -18,22 +18,19 @@
              class="w-full block h-[190px] sm:h-[240px] lg:h-[280px] object-cover object-center">
     </picture>
     <div class="p-5 md:p-6">
-        <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">The whole platform, and why it is shaped this way</h2>
-        <p class="section-context mb-3">The question on that card is a real one, and answering it well is not a query. It is a decision about grain, a contract with the source data, a transformation split across layers, an assertion that fails loudly when the arithmetic stops making sense, and finally a table somebody else can use without asking you what it means. This page follows that path end to end.</p>
-        <p class="section-context">Six projects sit underneath it: a claims warehouse, an orchestrated ELT pipeline, a streaming intake, the infrastructure as Terraform, a Beam streaming job, and a pricing model. All on Google Cloud, all built here, all version-controlled and shipped by CI.</p>
-        <div class="mt-4 pt-4 border-t border-slate-100 grid sm:grid-cols-2 gap-x-6 gap-y-2">
-            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">If you are hiring:</strong> an actuary built every layer of this, and can say why each one is the shape it is. The six projects are the inventory; the worked example is the argument.</p>
-            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">If you are building something similar:</strong> every claim here points at a file you can open. The layering rule and the GCP choices are the parts that transfer to your own stack.</p>
-        </div>
+        <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">How this platform got its shape</h2>
+        <p class="section-context mb-3">That question on the card is one I actually had to answer, and it turned out not to be a query. First it was a decision about what a single row should represent &mdash; a claim, or a payment against one, which are not the same thing and give different reserves. Then a promise about what the source data would always look like. Then a transformation split across layers so that no step did two jobs at once, with a check in the middle that fails loudly when the arithmetic stops making sense. Only at the very end is there a table, and the point of everything before it is that somebody else can use that table without asking me what it means.</p>
+        <p class="section-context mb-3">Underneath it sit six projects: a claims warehouse, an orchestrated ELT pipeline, a streaming intake, the infrastructure written as Terraform, a Beam streaming job, and a pricing model. All on Google Cloud, all built here, all shipped by CI.</p>
+        <p class="section-context">I trained as an actuary, which mostly means I knew what the numbers were supposed to mean before I had to decide where they would live. That is what this page is really about. Everything in it points at a file you can open, and wherever I picked one tool over another I have tried to say what would make me pick the other one instead.</p>
     </div>
 </div>
 
 <div class="card p-4 mb-6">
     <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2.5">On This Page</span>
     <ol class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-[13px]">
-        <li><a href="#en-the-platform-end-to-end" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> The Platform, End to End</a></li>
+        <li><a href="#en-from-csv-to-dashboard" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> From CSV to Dashboard</a></li>
         <li><a href="#en-the-six-projects" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">2.</span> The Six Projects</a></li>
-        <li><a href="#en-four-disciplines-one-table" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Four Disciplines, One Table</a></li>
+        <li><a href="#en-where-four-jobs-meet" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Where Four Jobs Meet</a></li>
         <li><a href="#en-how-a-question-becomes-a-table" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">4.</span> How a Question Becomes a Table</a></li>
         <li><a href="#en-the-layering-rule" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">5.</span> The Layering Rule</a></li>
         <li><a href="#en-actuarial-decisions-that-are-really-mo" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">6.</span> Actuarial Decisions That Are Really Modelling Decisions</a></li>
@@ -43,7 +40,7 @@
     </ol>
 </div>
 
-<h3 id="en-the-platform-end-to-end" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">The Platform, End to End</h3>
+<h3 id="en-from-csv-to-dashboard" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">From CSV to Dashboard</h3>
 <div class="card p-5 mb-6 overflow-x-auto">
     <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="0" y="30" width="110" height="56" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
@@ -134,7 +131,7 @@
 </div>
 
 <!-- 1. The intersection -->
-<h3 id="en-four-disciplines-one-table" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Four Disciplines, One Table</h3>
+<h3 id="en-where-four-jobs-meet" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Where Four Jobs Meet</h3>
 <p class="section-context mb-3">
     A claims table is where four jobs meet. In most insurers those jobs sit in different teams, and the
     handoffs between them are where the time and the disagreements go. Building all four sides is the
@@ -426,22 +423,19 @@
              class="w-full block h-[190px] sm:h-[240px] lg:h-[280px] object-cover object-center">
     </picture>
     <div class="p-5 md:p-6">
-        <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">La plataforma completa, y por qué tiene esta forma</h2>
-        <p class="section-context mb-3">La pregunta de esa tarjeta es real, y responderla bien no es una consulta. Es una decisión de grano, un contrato con los datos de origen, una transformación repartida en capas, una validación que falla de forma ruidosa cuando la aritmética deja de tener sentido, y al final una tabla que otra persona puede usar sin preguntarte qué significa. Esta página recorre ese camino completo.</p>
-        <p class="section-context">Debajo hay seis proyectos: un almacén de siniestros, un pipeline ELT orquestado, una ingesta en streaming, la infraestructura en Terraform, un job de streaming en Beam y un modelo de pricing. Todo sobre Google Cloud, todo construido aquí, todo versionado y desplegado por CI.</p>
-        <div class="mt-4 pt-4 border-t border-slate-100 grid sm:grid-cols-2 gap-x-6 gap-y-2">
-            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">Si estás contratando:</strong> un actuario construyó cada capa de esto, y puede explicar por qué cada una tiene la forma que tiene. Los seis proyectos son el inventario; el ejemplo trabajado es el argumento.</p>
-            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">Si estás construyendo algo parecido:</strong> cada afirmación apunta a un archivo que puedes abrir. La regla de capas y las decisiones de GCP son lo que se transfiere a tu propio stack.</p>
-        </div>
+        <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">Cómo esta plataforma tomó su forma</h2>
+        <p class="section-context mb-3">Esa pregunta de la tarjeta la tuve que responder de verdad, y resultó no ser una consulta. Primero fue decidir qué representa un renglón: un siniestro, o un pago contra un siniestro, que no es lo mismo y da reservas distintas. Después, una promesa sobre cómo se iba a ver siempre la fuente. Después, una transformación partida en capas para que ningún paso hiciera dos trabajos a la vez, con una validación en medio que truena fuerte cuando la aritmética deja de cuadrar. Hasta el final aparece una tabla, y el sentido de todo lo anterior es que alguien más pueda usarla sin preguntarme qué significa.</p>
+        <p class="section-context mb-3">Debajo hay seis proyectos: un almacén de siniestros, un pipeline ELT orquestado, una ingesta en streaming, la infraestructura escrita en Terraform, un job de streaming en Beam y un modelo de pricing. Todo sobre Google Cloud, todo construido aquí, todo desplegado por CI.</p>
+        <p class="section-context">Estudié actuaría, que en la práctica quiere decir que sabía qué debían significar los números antes de tener que decidir dónde iban a vivir. De eso trata realmente esta página. Todo lo que hay en ella apunta a un archivo que puedes abrir, y donde elegí una herramienta sobre otra intenté decir qué me haría elegir la contraria.</p>
     </div>
 </div>
 
 <div class="card p-4 mb-6">
     <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2.5">En Esta Página</span>
     <ol class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-[13px]">
-        <li><a href="#es-la-plataforma-de-punta-a-punta" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> La Plataforma, de Punta a Punta</a></li>
+        <li><a href="#es-del-csv-al-dashboard" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> Del CSV al Dashboard</a></li>
         <li><a href="#es-los-seis-proyectos" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">2.</span> Los Seis Proyectos</a></li>
-        <li><a href="#es-cuatro-disciplinas-una-tabla" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Cuatro Disciplinas, Una Tabla</a></li>
+        <li><a href="#es-donde-se-encuentran-cuatro-oficios" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Dónde se Encuentran Cuatro Oficios</a></li>
         <li><a href="#es-como-una-pregunta-se-vuelve-una-tabla" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">4.</span> Cómo una Pregunta se Vuelve una Tabla</a></li>
         <li><a href="#es-la-regla-de-las-capas" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">5.</span> La Regla de las Capas</a></li>
         <li><a href="#es-decisiones-actuariales-que-en-realidad" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">6.</span> Decisiones Actuariales que en Realidad son de Modelado</a></li>
@@ -451,7 +445,7 @@
     </ol>
 </div>
 
-<h3 id="es-la-plataforma-de-punta-a-punta" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">La Plataforma, de Punta a Punta</h3>
+<h3 id="es-del-csv-al-dashboard" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Del CSV al Dashboard</h3>
 <div class="card p-5 mb-6 overflow-x-auto">
     <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="0" y="30" width="110" height="56" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
@@ -542,7 +536,7 @@
 </div>
 
 <!-- 1. La intersección -->
-<h3 id="es-cuatro-disciplinas-una-tabla" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Cuatro Disciplinas, Una Tabla</h3>
+<h3 id="es-donde-se-encuentran-cuatro-oficios" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Dónde se Encuentran Cuatro Oficios</h3>
 <p class="section-context mb-3">
     Una tabla de siniestros es donde se encuentran cuatro oficios. En la mayoría de las aseguradoras esos
     oficios viven en equipos distintos, y los traspasos entre ellos son donde se va el tiempo y donde
