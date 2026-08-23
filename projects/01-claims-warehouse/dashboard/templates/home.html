@@ -10,12 +10,60 @@
 </div>
 {% endif %}
 
-<p class="section-context mb-4" data-lang="en">
-    This dashboard is the <strong>presentation layer</strong> of a data engineering project that spans six
-    interconnected systems: synthetic data generation, a Dataform-managed warehouse in BigQuery,
-    an orchestrated ELT pipeline on Cloud Run, a Pub/Sub streaming intake, a GLM pricing model,
-    and this FastAPI application deployed on Cloud Run.
-</p>
+<div class="card overflow-hidden mb-6">
+    <picture>
+        <source srcset="/static/img/hero-desk.webp" type="image/webp">
+        <img src="/static/img/hero-desk.jpg" width="1800" height="764"
+             alt="Overhead view of a desk: a loss development triangle worked out by hand on graph paper, a mechanical pencil, an enamel mug, and a closed laptop with a coiled cable."
+             class="w-full block h-[200px] sm:h-[260px] lg:h-[300px] object-cover object-center">
+    </picture>
+    <div class="p-5 md:p-6">
+        <div data-lang="en">
+            <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">
+                An actuary who builds his own data infrastructure
+            </h2>
+            <p class="section-context mb-3">
+                I trained as an actuary. Loss development, IBNR, pure premium: that is the mathematics
+                this dashboard is doing. What sits underneath it is engineering. A warehouse, an
+                orchestrated pipeline, a streaming intake, a pricing model, all on Google Cloud, all
+                built here.
+            </p>
+            <p class="section-context">
+                In insurance those two skills usually live in two different people, and the handoff
+                between them is where most of the time goes. Keeping them in one pair of hands is the
+                point of this project. You cannot design a claims table well without knowing what a
+                development year is, and a reserve you have no way to query is not a reserve you can
+                defend.
+            </p>
+            <p class="text-[13px] text-slate-500 mt-4">
+                If the vocabulary here is unfamiliar, <a href="/how-its-built" class="underline hover:text-slate-700">How It's Built</a>
+                walks through the whole pipeline. Every page below opens by saying what it is for and how to read it.
+            </p>
+        </div>
+        <div data-lang="es" class="hidden">
+            <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">
+                Un actuario que construye su propia infraestructura de datos
+            </h2>
+            <p class="section-context mb-3">
+                Me formé como actuario. Desarrollo de siniestros, IBNR, prima pura: esa es la matemática
+                que hace este dashboard. Lo que está debajo es ingeniería. Un warehouse, un pipeline
+                orquestado, ingesta en streaming, un modelo de tarificación, todo sobre Google Cloud y
+                todo construido aquí.
+            </p>
+            <p class="section-context">
+                En seguros esas dos habilidades suelen vivir en dos personas distintas, y en el traspaso
+                entre ambas se va la mayor parte del tiempo. Tenerlas en un mismo par de manos es el punto
+                de este proyecto. No se diseña bien una tabla de siniestros sin saber qué es un año de
+                desarrollo, y una reserva que no puedes consultar no es una reserva que puedas defender.
+            </p>
+            <p class="text-[13px] text-slate-500 mt-4">
+                Si el vocabulario te resulta ajeno, <a href="/how-its-built" class="underline hover:text-slate-700">Cómo Está Construido</a>
+                recorre el pipeline completo. Cada página de abajo abre explicando para qué sirve y cómo leerla.
+            </p>
+        </div>
+    </div>
+</div>
+
 <p class="section-context mb-6" data-lang="en">
     Every number below comes from a live SQL aggregation against the
     <code class="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded">dev_claims_analytics</code>
@@ -23,12 +71,6 @@
     in BigQuery. The portfolio covers five lines of business across all 32 states of Mexico.
 </p>
 
-<p class="section-context mb-4 hidden" data-lang="es">
-    Este dashboard es la <strong>capa de presentación</strong> de un proyecto de ingeniería de datos que conecta seis
-    sistemas: generación de datos sintéticos, un warehouse administrado con Dataform en BigQuery,
-    un pipeline ELT orquestado en Cloud Run, ingesta en tiempo real con Pub/Sub, un modelo GLM de tarificación
-    y esta aplicación FastAPI desplegada en Cloud Run.
-</p>
 <p class="section-context mb-6 hidden" data-lang="es">
     Cada número que ves aquí viene de una consulta SQL en vivo contra los datasets
     <code class="text-[12px] bg-slate-100 px-1.5 py-0.5 rounded">dev_claims_analytics</code>
@@ -96,24 +138,36 @@
         <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Triángulo de Desarrollo de Pérdidas</span>
         <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">How claim costs develop over time. Shows cumulative paid losses and IBNR reserve patterns by accident year.</span>
         <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Cómo evolucionan los costos de siniestros a lo largo del tiempo. Muestra pérdidas pagadas acumuladas y patrones de reserva IBNR por año de ocurrencia.</span>
+    
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic" data-lang="en">In plain terms: Claims are not paid the year they happen. This shows how much of each year&rsquo;s cost has been paid so far, and roughly how much is still owed.</span>
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic hidden" data-lang="es">En palabras simples: Los siniestros no se pagan el año en que ocurren. Esto muestra cuánto del costo de cada año ya se pagó, y aproximadamente cuánto se sigue debiendo.</span>
     </a>
     <a href="/portfolio-health" class="card block p-4 hover:border-slate-300 transition-colors">
         <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Portfolio Health</span>
         <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Salud del Portafolio</span>
         <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">Underwriting performance trends: claim frequency, pure premium, and loss ratios across coverage lines and years.</span>
         <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Tendencias de suscripción: frecuencia de siniestros, prima pura y razones de pérdida por línea de cobertura y año.</span>
+    
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic" data-lang="en">In plain terms: Is this book of business making money or losing it, and is that getting better or worse over time?</span>
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic hidden" data-lang="es">En palabras simples: ¿Esta cartera está ganando o perdiendo dinero, y esa tendencia mejora o empeora con el tiempo?</span>
     </a>
     <a href="/pricing-adequacy" class="card block p-4 hover:border-slate-300 transition-colors">
         <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Pricing Adequacy</span>
         <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Adecuación de Precios</span>
         <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">GLM model output comparing predicted required premium vs. actual charged premium to identify mispriced policies.</span>
         <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Salida del modelo GLM que compara la prima requerida estimada contra la prima cobrada para identificar pólizas mal tarificadas.</span>
+    
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic" data-lang="en">In plain terms: For each policy: what the model says it should have cost, against what the customer was actually charged.</span>
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic hidden" data-lang="es">En palabras simples: Para cada póliza: lo que el modelo dice que debió costar, contra lo que realmente se le cobró al cliente.</span>
     </a>
     <a href="/geographic-risk" class="card block p-4 hover:border-slate-300 transition-colors">
         <span class="text-[14px] font-semibold text-slate-800" data-lang="en">Geographic Risk Concentration</span>
         <span class="text-[14px] font-semibold text-slate-800 hidden" data-lang="es">Concentración de Riesgo Geográfico</span>
         <span class="block text-[13px] text-slate-500 mt-0.5" data-lang="en">State-level claim volume and severity. Highlights where portfolio risk is most concentrated across Mexico.</span>
         <span class="block text-[13px] text-slate-500 mt-0.5 hidden" data-lang="es">Volumen y severidad de siniestros por estado. Muestra dónde se concentra el riesgo del portafolio en México.</span>
+    
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic" data-lang="en">In plain terms: Where in Mexico the claims are, and where they are most expensive when they happen.</span>
+        <span class="block text-[12px] text-slate-400 mt-1.5 italic hidden" data-lang="es">En palabras simples: En qué parte de México ocurren los siniestros, y dónde resultan más caros cuando ocurren.</span>
     </a>
 </div>
 
@@ -123,32 +177,38 @@
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 text-center text-[12px]">
         <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
             <span class="block font-semibold text-slate-700">P01</span>
-            <span class="text-slate-500">Claims Warehouse</span>
+            <span class="text-slate-500" data-lang="en">Claims Warehouse</span>
+            <span class="text-slate-500 hidden" data-lang="es">Almacén de Siniestros</span>
             <span class="block text-[10px] text-slate-400 mt-1">Dataform + BigQuery</span>
         </div>
         <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
             <span class="block font-semibold text-slate-700">P02</span>
-            <span class="text-slate-500">Orchestrated ELT</span>
+            <span class="text-slate-500" data-lang="en">Orchestrated ELT</span>
+            <span class="text-slate-500 hidden" data-lang="es">ELT Orquestado</span>
             <span class="block text-[10px] text-slate-400 mt-1">Cloud Run + Scheduler</span>
         </div>
         <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
             <span class="block font-semibold text-slate-700">P03</span>
-            <span class="text-slate-500">Streaming Intake</span>
+            <span class="text-slate-500" data-lang="en">Streaming Intake</span>
+            <span class="text-slate-500 hidden" data-lang="es">Ingesta en Tiempo Real</span>
             <span class="block text-[10px] text-slate-400 mt-1">Pub/Sub + Cloud Run</span>
         </div>
         <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
             <span class="block font-semibold text-slate-700">P04</span>
-            <span class="text-slate-500">Data Quality</span>
-            <span class="block text-[10px] text-slate-400 mt-1">Dataform Assertions</span>
+            <span class="text-slate-500" data-lang="en">Infrastructure as Code</span>
+            <span class="text-slate-500 hidden" data-lang="es">Infraestructura como Código</span>
+            <span class="block text-[10px] text-slate-400 mt-1">Terraform + GCP</span>
         </div>
         <div class="py-3 px-2 rounded-md bg-slate-50 border border-slate-200">
             <span class="block font-semibold text-slate-700">P05</span>
-            <span class="text-slate-500">Cost Governance</span>
-            <span class="block text-[10px] text-slate-400 mt-1">BQ Slots + Budgets</span>
+            <span class="text-slate-500" data-lang="en">Streaming Pipeline</span>
+            <span class="text-slate-500 hidden" data-lang="es">Pipeline en Streaming</span>
+            <span class="block text-[10px] text-slate-400 mt-1">Dataflow + Beam</span>
         </div>
         <div class="py-3 px-2 rounded-md bg-white border border-dashed border-slate-300">
             <span class="block font-semibold text-slate-700">P06</span>
-            <span class="text-slate-500">Pricing ML</span>
+            <span class="text-slate-500" data-lang="en">Pricing ML</span>
+            <span class="text-slate-500 hidden" data-lang="es">Tarificación con ML</span>
             <span class="block text-[10px] text-slate-400 mt-1">GLM &rarr; model_scoring</span>
         </div>
     </div>

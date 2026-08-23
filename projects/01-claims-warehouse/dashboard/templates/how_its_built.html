@@ -45,7 +45,7 @@
         <path d="M744 58 L788 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
         <rect x="158" y="100" width="584" height="18" rx="4" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
         <text x="450" y="113" text-anchor="middle" font-size="9" fill="#94A3B8">GitHub Actions CI/CD: lint, test, build, deploy on every push to main</text>
-        <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
+        <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
     </svg>
 </div>
 
@@ -82,8 +82,8 @@
         <div class="flex items-start gap-3">
             <span class="text-xs font-bold text-white bg-emerald-600 rounded px-1.5 py-0.5 mt-0.5">P04</span>
             <div>
-                <span class="font-semibold text-slate-800 text-[14px]">Data Quality Framework</span>
-                <p class="text-[13px] text-slate-500 mt-1">Dataform assertions enforce referential integrity, uniqueness, and row-level conditions. If a quality check fails, the pipeline stops before bad data reaches the analytics layer.</p>
+                <span class="font-semibold text-slate-800 text-[14px]">Infrastructure as Code</span>
+                <p class="text-[13px] text-slate-500 mt-1">Every GCP resource behind P01 to P03 is defined in Terraform: reusable modules for BigQuery, GCS, Pub/Sub, Cloud Run and IAM, with dev and prod separated by variable-driven naming. CI plans on the pull request and applies on merge, authenticating through Workload Identity Federation so there are no service account keys to leak.</p>
             </div>
         </div>
     </div>
@@ -91,8 +91,8 @@
         <div class="flex items-start gap-3">
             <span class="text-xs font-bold text-white bg-amber-600 rounded px-1.5 py-0.5 mt-0.5">P05</span>
             <div>
-                <span class="font-semibold text-slate-800 text-[14px]">Cost Governance</span>
-                <p class="text-[13px] text-slate-500 mt-1">BigQuery slot reservations, budget alerts, and resource labeling. The whole platform runs on GCP's free tier and pay-per-query pricing, with a total monthly cost under $5 USD.</p>
+                <span class="font-semibold text-slate-800 text-[14px]">Streaming Claims Pipeline</span>
+                <p class="text-[13px] text-slate-500 mt-1">A true streaming Apache Beam pipeline on Dataflow, where P03 runs Beam in batch. It windows on event time rather than arrival time, fires early results every 30 seconds and again when late events land, still accepts data up to an hour behind the watermark, and routes malformed events to a dead-letter topic with the reason attached.</p>
             </div>
         </div>
     </div>
@@ -158,7 +158,7 @@
         <path d="M744 58 L788 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-es)"/>
         <rect x="158" y="100" width="584" height="18" rx="4" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
         <text x="450" y="113" text-anchor="middle" font-size="9" fill="#94A3B8">GitHub Actions CI/CD: lint, test, build y deploy automático en cada push a main</text>
-        <defs><marker id="arrow-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
+        <defs><marker id="arrow-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
     </svg>
 </div>
 
@@ -195,8 +195,8 @@
         <div class="flex items-start gap-3">
             <span class="text-xs font-bold text-white bg-emerald-600 rounded px-1.5 py-0.5 mt-0.5">P04</span>
             <div>
-                <span class="font-semibold text-slate-800 text-[14px]">Marco de Calidad de Datos</span>
-                <p class="text-[13px] text-slate-500 mt-1">Las assertions de Dataform verifican integridad referencial, unicidad y condiciones a nivel de fila. Si alguna validación falla, el pipeline se detiene antes de que datos incorrectos lleguen a la capa de analíticos.</p>
+                <span class="font-semibold text-slate-800 text-[14px]">Infraestructura como Código</span>
+                <p class="text-[13px] text-slate-500 mt-1">Cada recurso de GCP detrás de P01 a P03 está definido en Terraform: módulos reutilizables para BigQuery, GCS, Pub/Sub, Cloud Run e IAM, con dev y prod separados por nombres derivados de variables. CI ejecuta el plan en el pull request y aplica al hacer merge, autenticándose con Workload Identity Federation para no tener llaves de cuenta de servicio que se puedan filtrar.</p>
             </div>
         </div>
     </div>
@@ -204,8 +204,8 @@
         <div class="flex items-start gap-3">
             <span class="text-xs font-bold text-white bg-amber-600 rounded px-1.5 py-0.5 mt-0.5">P05</span>
             <div>
-                <span class="font-semibold text-slate-800 text-[14px]">Gobernanza de Costos</span>
-                <p class="text-[13px] text-slate-500 mt-1">Reservaciones de slots de BigQuery, alertas de presupuesto y etiquetado de recursos. La plataforma completa corre aprovechando la capa gratuita de GCP y cobro por consulta, con un costo mensual total menor a $5 USD.</p>
+                <span class="font-semibold text-slate-800 text-[14px]">Pipeline de Siniestros en Streaming</span>
+                <p class="text-[13px] text-slate-500 mt-1">Un pipeline de Apache Beam en streaming real sobre Dataflow, mientras que P03 corre Beam en modo batch. Ventanea por tiempo de evento y no por tiempo de llegada, emite resultados anticipados cada 30 segundos y otra vez cuando llegan eventos tardíos, acepta datos hasta una hora detrás del watermark, y manda los eventos malformados a un tópico de dead-letter con el motivo adjunto.</p>
             </div>
         </div>
     </div>
