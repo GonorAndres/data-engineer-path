@@ -41,7 +41,7 @@ graph TB
     end
 
     subgraph "Presentation Layer"
-        LOOKER[Looker Studio<br/>Dashboard<br/>Free]
+        DASH[FastAPI Dashboard<br/>Cloud Run<br/>Scale to zero]
     end
 
     subgraph "Operations"
@@ -63,7 +63,7 @@ graph TB
     CR_SUB --> BQ_RAW
 
     BQ_RAW --> BQ_STG --> BQ_INT --> BQ_MART --> BQ_RPT
-    BQ_RPT --> LOOKER
+    BQ_RPT --> DASH
 
     %% Operations
     CR_PIPE -.-> LOGS
@@ -116,7 +116,7 @@ graph LR
 2. HTTP POST with OIDC token -> Cloud Run (ELT pipeline)
 3. Pipeline reads from GCS raw/ -> loads to BigQuery claims_raw
 4. SQL transforms: raw -> staging -> intermediate -> analytics -> reports
-5. Looker Studio dashboard refreshes from claims_reports
+5. The FastAPI dashboard on Cloud Run reads claims_analytics and claims_reports on request
 ```
 
 **Latency**: T+1 day (data available by 06:15 UTC)
@@ -147,7 +147,7 @@ graph LR
 | Storage | BigQuery (< 1 GB) | $0.00 (free tier) |
 | Messaging | Pub/Sub (< 10 GB) | $0.00 (free tier) |
 | Analytics | BigQuery queries (< 1 TB) | $0.00 (free tier) |
-| Dashboard | Looker Studio | $0.00 (free) |
+| Dashboard | Cloud Run (FastAPI, scale to zero) | $0.00 (free tier) |
 | IaC | Terraform | $0.00 (free) |
 | CI/CD | GitHub Actions | $0.00 (free for public repos) |
 | **Total** | | **~$0.12/month** |
@@ -162,10 +162,10 @@ graph LR
 | Storage | BigQuery (~50 GB) | $1.00 |
 | Messaging | Pub/Sub (~300K messages) | $0.00 (free tier) |
 | Analytics | BigQuery queries (~500 GB/month) | $2.50 |
-| Dashboard | Looker Studio | $0.00 |
+| Dashboard | Cloud Run (FastAPI) | ~$1 |
 | IaC | Terraform | $0.00 |
 | CI/CD | GitHub Actions | $0.00 |
-| **Total** | | **~$9/month** |
+| **Total** | | **~$10/month** |
 
 ### Cost Comparison: This Architecture vs. Enterprise
 
@@ -220,7 +220,7 @@ Key security decisions:
 | Orchestration | Cloud Run + Scheduler | Composer, Dagster Cloud | 4000x cheaper for simple linear DAGs |
 | Streaming | Pub/Sub | Kafka, Kinesis | GCP-native, serverless, generous free tier |
 | CI/CD | GitHub Actions | Cloud Build, Jenkins | Free, native GCP auth via WIF, familiar |
-| Dashboard | Looker Studio | Metabase, Superset | Free, connects directly to BigQuery |
+| Dashboard | FastAPI on Cloud Run | Looker Studio, Metabase, Superset | Same scale-to-zero cost as a free BI tool, but the page is code: versioned, testable, and free to explain its own methodology |
 
 ## Related Docs
 

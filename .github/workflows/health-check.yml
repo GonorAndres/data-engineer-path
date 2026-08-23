@@ -27,10 +27,27 @@ jobs:
     steps:
       - name: Claims Dashboard (P01)
         run: |
-          URL="https://claims-dashboard-451451662791.us-central1.run.app"
+          URL="https://data-engineer.gonor.me"
           STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$URL")
           echo "GET $URL -> $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "::error title=Dashboard down::$URL returned $STATUS (expected 200)"
+            exit 1
+          fi
+
+      # The run.app hostnames stay reachable forever -- a Cloud Run domain
+      # mapping adds a route in, it never removes one.  Every link published
+      # before the custom domain existed (blog posts, the portfolio site, the
+      # CV) still points at them, so the 301 is what keeps those alive.  If it
+      # regresses, those links start splitting traffic again instead of dying
+      # loudly, which is exactly the kind of failure nobody notices.
+      - name: Claims Dashboard provider URL still redirects (P01)
+        run: |
+          URL="https://claims-dashboard-451451662791.us-central1.run.app/loss-triangle"
+          STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$URL")
+          TARGET=$(curl -sS -o /dev/null -w "%{redirect_url}" --max-time 30 "$URL")
+          echo "GET $URL -> $STATUS -> $TARGET"
+          if [ "$STATUS" != "301" ] || [ "$TARGET" != "https://data-engineer.gonor.me/loss-triangle" ]; then
+            echo "::error title=Canonical redirect broken::expected 301 to https://data-engineer.gonor.me/loss-triangle, got $STATUS to $TARGET"
             exit 1
           fi

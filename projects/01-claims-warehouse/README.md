@@ -30,7 +30,7 @@ A complete analytics warehouse for insurance claims data -- from synthetic data 
 | Cloud warehouse | BigQuery | GCP-native, serverless, partitioning/clustering |
 | Cloud transforms | Dataform (SQLX) | Native BigQuery integration, free, DAG-based |
 | Raw storage | GCS | Data lake for raw CSV ingestion |
-| Visualization | Looker Studio | Free BI tool, connects directly to BigQuery |
+| Visualization | FastAPI + Jinja2 + Plotly on Cloud Run | Queries BigQuery per request; full control over copy and layout, which an embedded BI report does not give |
 
 ## Architecture
 
@@ -52,7 +52,7 @@ graph LR
         BQ_STG --> BQ_INT[claims_intermediate]
         BQ_INT --> BQ_MART[claims_analytics]
         BQ_MART --> BQ_RPT[claims_reports]
-        BQ_RPT --> DASH[Looker Studio<br/>Dashboard]
+        BQ_RPT --> DASH[FastAPI Dashboard<br/>Cloud Run]
     end
 ```
 
@@ -143,12 +143,30 @@ python scripts/query_bigquery.py --project YOUR_PROJECT_ID
 ## Deployment
 
 **Status**: Deployed to GCP (dev environment)
-**Dashboard**: [https://claims-dashboard-451451662791.us-central1.run.app](https://claims-dashboard-451451662791.us-central1.run.app) (public -- 4 pages: Loss Triangle, Portfolio Health, Pricing Adequacy, Geographic Risk)
+**Dashboard**: [https://data-engineer.gonor.me](https://data-engineer.gonor.me) (public -- FastAPI on Cloud Run, 6 pages: Overview, Loss Triangle, Portfolio Health, Pricing Adequacy, Geographic Risk, How It's Built). The two `run.app` hostnames Cloud Run still answers on 301 here, so the site has one canonical address.
 **BigQuery Project**: `project-ad7a5be2-a1c7-4510-82d`
 **Datasets**: `dev_claims_raw`, `dev_claims_staging`, `dev_claims_intermediate`, `dev_claims_analytics`, `dev_claims_reports`
 **GCS Bucket**: `dev-claims-data-project-ad7a5be2-a1c7-4510-82d`
 **Dataform Repository**: `claims-warehouse-dataform` (deployed via Python SDK)
 **Cost**: <$1/month (synthetic data, within free tiers)
+
+### What It Looks Like
+
+Every number on these pages comes from a live query against `dev_claims_analytics` and
+`dev_claims_reports`. There are no static fixtures behind the dashboard.
+
+| | |
+|---|---|
+| ![Overview](docs/screenshots/overview.png) | ![Loss triangle](docs/screenshots/loss-triangle.png) |
+| **Overview** -- 608 claims, $26.9M paid, $44.3K average severity | **Loss Development Triangle** -- cumulative paid by accident year, with the blank corner as IBNR |
+| ![Portfolio health](docs/screenshots/portfolio-health.png) | ![Pricing adequacy](docs/screenshots/pricing-adequacy.png) |
+| **Portfolio Health** -- frequency, pure premium and loss ratio by coverage | **Pricing Adequacy** -- P06's GLM output scoring predicted vs charged premium |
+| ![Geographic risk](docs/screenshots/geographic-risk.png) | ![How it's built](docs/screenshots/how-its-built.png) |
+| **Geographic Risk** -- claim concentration across Mexico's 32 states | **How It's Built** -- the platform explaining its own pipeline, EN and ES |
+
+CI on the commit that deployed it:
+
+![CI pipeline](docs/screenshots/ci-pipeline.png)
 
 ### Deployment Command
 
@@ -198,9 +216,16 @@ Export format was CSV, which was the wrong call for anything at scale. Parquet p
 │       ├── marts/                 #   6 SQLX: dim_*/fct_* with clustering
 │       ├── reports/               #   2 SQLX: loss triangle + frequency
 │       └── assertions/            #   3 data quality assertions
+├── dashboard/                     # Public FastAPI dashboard (Cloud Run)
+│   ├── main.py                    #   6 routes + /ingest analytics proxy
+│   ├── Dockerfile                 #   Built and deployed by ci-cd.yml
+│   ├── templates/                 #   Jinja2 pages, EN/ES on How It's Built
+│   ├── static/                    #   CSS, JS, favicon
+│   └── utils/                     #   BigQuery client + PostHog snippet
 ├── scripts/                       # Deployment scripts
 │   ├── setup_gcp.sh               #   GCP setup (APIs, GCS, BQ datasets, load)
 │   └── query_bigquery.py          #   Query deployed warehouse
+├── docs/screenshots/              # Deployment evidence (embedded above)
 ├── data/
 │   └── sample_data/               #   Generated CSVs (~288 KB)
 └── tests/                         #   52 pytest tests

@@ -4,6 +4,19 @@
 
 A complete data engineering platform built around insurance claims data, demonstrating end-to-end skills from dimensional modeling to infrastructure-as-code. Built by an actuarial sciences graduate targeting DE roles in Mexico's fintech and insurance sector.
 
+## See it running
+
+**[data-engineer.gonor.me](https://data-engineer.gonor.me)** is the dashboard at the end of
+this platform. Every figure on it comes from a live BigQuery query against tables Dataform
+built -- there are no fixtures behind it.
+
+[![Claims Analytics dashboard](projects/01-claims-warehouse/docs/screenshots/overview.png)](https://data-engineer.gonor.me)
+
+608 synthetic claims across five lines of business and all 32 Mexican states, carried from
+CSV in GCS through staging, intermediate, analytics and report layers in BigQuery.
+[How It's Built](https://data-engineer.gonor.me/how-its-built) walks through the pipeline
+from inside the app, in English and Spanish.
+
 ## Platform Architecture
 
 ```mermaid
@@ -15,7 +28,7 @@ graph TB
         BQ_STG --> BQ_INT[Intermediate]
         BQ_INT --> BQ_MART[Analytics<br/>fct_claims, dim_*]
         BQ_MART --> TRIANGLE[Loss Triangle]
-        BQ_MART --> DASH[Looker Studio]
+        BQ_MART --> DASH[FastAPI Dashboard<br/>Cloud Run]
     end
 
     subgraph "Project 2: Orchestration"
