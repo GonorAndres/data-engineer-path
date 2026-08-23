@@ -3,19 +3,21 @@
 import asyncio
 import logging
 import math
+import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
+import httpx
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.gzip import GZipMiddleware
 
 from utils.bq_client import query_bq, DATASET_ANALYTICS, DATASET_REPORTS
-from utils.analytics import POSTHOG_SNIPPET
+from utils.analytics import CANONICAL_HOST, POSTHOG_SNIPPET
 
 log = logging.getLogger("dashboard")
 
@@ -39,11 +41,27 @@ def _warm_cache():
             log.warning("Cache warm failed: %s", exc)
 
 
+# Set in the deploy workflow only once data-engineer.gonor.me resolves. Unset
+# means "serve on whatever host asked", which is what local development and the
+# window before DNS propagates both need -- an unconditional redirect here would
+# take the dashboard down for as long as the new hostname was not answering.
+REDIRECT_TO_CANONICAL = os.getenv("CANONICAL_REDIRECT_HOST", "").strip()
+
+# PostHog ingestion endpoints. `/ingest/static/*` serves the library itself and
+# lives on a different host than the event endpoint.
+POSTHOG_API_ORIGIN = "https://us.i.posthog.com"
+POSTHOG_ASSET_ORIGIN = "https://us-assets.i.posthog.com"
+
+
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app_: FastAPI):
     loop = asyncio.get_event_loop()
     loop.run_in_executor(ThreadPoolExecutor(1), _warm_cache)
-    yield
+    app_.state.http = httpx.AsyncClient(timeout=10.0, follow_redirects=False)
+    try:
+        yield
+    finally:
+        await app_.state.http.aclose()
 
 
 app = FastAPI(title="Claims Analytics", docs_url=None, redoc_url=None, lifespan=lifespan)
@@ -97,8 +115,70 @@ def _ctx(active_page: str, **extra):
     return {
         "active_page": active_page,
         "posthog_snippet": POSTHOG_SNIPPET,
+        "canonical_host": CANONICAL_HOST,
         **extra,
     }
+
+
+@app.middleware("http")
+async def canonical_host_redirect(request: Request, call_next):
+    """301 the Cloud Run hostnames onto the custom domain.
+
+    Cloud Run keeps answering on both `<service>-<hash>-<region>.a.run.app` and
+    `<service>-<project-number>.<region>.run.app` after a domain mapping is added --
+    the mapping is an extra route in, never a replacement. Left alone that splits
+    traffic across three hostnames and scatters the search ranking. There are no
+    preview hostnames to protect on Cloud Run, so matching the `.run.app` suffix is
+    both safe and simpler than listing each form.
+    """
+    if REDIRECT_TO_CANONICAL and not request.url.path.startswith("/ingest"):
+        # /ingest is exempt: a 301 on a POST loses the body in most clients, so
+        # redirecting it would silently drop analytics events from any page still
+        # loaded on a run.app hostname.
+        host = request.url.hostname or ""
+        if host.endswith(".run.app"):
+            target = request.url.replace(scheme="https", netloc=REDIRECT_TO_CANONICAL)
+            return RedirectResponse(str(target), status_code=301)
+    return await call_next(request)
+
+
+@app.api_route("/ingest/{path:path}", methods=["GET", "POST", "OPTIONS"])
+async def posthog_proxy(request: Request, path: str):
+    """Same-origin reverse proxy for PostHog.
+
+    Requests to `us.i.posthog.com` are on every adblock list, and blocking them
+    costs both the events and the lazily-loaded session-replay recorder. A
+    first-party path is not recognisable as analytics and survives.
+    """
+    origin = POSTHOG_ASSET_ORIGIN if path.startswith("static/") else POSTHOG_API_ORIGIN
+    url = f"{origin}/{path}"
+    # Host would name this service, and Accept-Encoding invites a compressed body
+    # that we would hand back with the wrong Content-Length.
+    headers = {
+        k: v for k, v in request.headers.items()
+        if k.lower() not in ("host", "accept-encoding", "content-length")
+    }
+    try:
+        upstream = await request.app.state.http.request(
+            request.method, url,
+            content=await request.body(),
+            headers=headers,
+            params=request.query_params,
+        )
+    except httpx.HTTPError as exc:
+        # Analytics must never take a page down with it.
+        log.warning("PostHog proxy failed for %s: %s", path, exc)
+        return Response(status_code=502)
+
+    passthrough = {
+        k: v for k, v in upstream.headers.items()
+        if k.lower() in ("content-type", "cache-control", "access-control-allow-origin")
+    }
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        headers=passthrough,
+    )
 
 
 @app.get("/health")

@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Claims Analytics{% endblock %}</title>
 
+    <!-- Points at the custom domain regardless of which hostname served the page,
+         so the run.app URLs never compete with it in search results. -->
+    <link rel="canonical" href="https://{{ canonical_host }}{{ request.url.path }}">
+
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

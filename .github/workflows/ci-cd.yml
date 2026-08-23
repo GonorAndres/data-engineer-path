@@ -363,7 +363,7 @@ jobs:
           echo "Test health: curl -H 'Authorization: Bearer \$(gcloud auth print-identity-token)' ${{ steps.deploy.outputs.url }}/health"
 
   # ===========================================================================
-  # Job 5: Build Dashboard Image (P01 Streamlit claims-dashboard)
+  # Job 5: Build Dashboard Image (P01 FastAPI claims-dashboard)
   # ===========================================================================
   # Separate from the ELT build because the dashboard is its own Cloud Run
   # service with a different Dockerfile, public visibility, and independent
@@ -461,6 +461,7 @@ jobs:
           # truth for runtime configuration.
           env_vars: |
             GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+            CANONICAL_REDIRECT_HOST=data-engineer.gonor.me
           flags: |
             --memory=512Mi
             --cpu=1

@@ -197,7 +197,7 @@ graph LR
 
     D --> DL["Dead-Letter<br/>Pub/Sub Topic"]
     F --> BQ["BigQuery<br/>fct_claims_realtime"]
-    BQ --> DASH["Looker Studio<br/>Claims Dashboard"]
+    BQ --> DASH["FastAPI Dashboard<br/>Cloud Run"]
 ```
 
 **Pipeline design decisions**:
