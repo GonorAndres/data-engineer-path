@@ -63,3 +63,12 @@ output "pipeline_service_account_email" {
   description = "Email of the pipeline service account"
   value       = module.iam.pipeline_service_account_email
 }
+
+# -----------------------------------------------------------------------------
+# Artifact Registry
+# -----------------------------------------------------------------------------
+
+output "artifact_registry_url" {
+  description = "Host path CI pushes container images to"
+  value       = module.artifact_registry.repository_url
+}
