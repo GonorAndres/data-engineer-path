@@ -159,3 +159,16 @@ module "scheduler" {
   pipeline_service_url           = module.cloud_run.pipeline_service_url
   pipeline_service_account_email = module.iam.pipeline_service_account_email
 }
+
+# -----------------------------------------------------------------------------
+# Artifact Registry Module -- the Docker repository CI pushes every image to
+# Cost: $0.10/GB/month beyond the 0.5 GB free tier, bounded by cleanup policies
+# -----------------------------------------------------------------------------
+
+module "artifact_registry" {
+  source = "./modules/artifact_registry"
+
+  project_id    = var.project_id
+  region        = var.region
+  common_labels = local.common_labels
+}

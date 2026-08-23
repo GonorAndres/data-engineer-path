@@ -121,6 +121,79 @@ A healthy rebuild produces 16 tables across staging, intermediate, analytics and
 with every assertion passing. Cost is negligible -- 281 KiB of source CSV, loads unbilled,
 queries far inside the free tier, with `max_bytes_billed` capped at 10 GiB per query.
 
+### The deploy depends on an Artifact Registry repo Terraform does not manage
+
+On 2026-08-23 the merge of PR #23 produced a **green lint, green tests, and no
+deployment**. Both image pushes failed with `name unknown: Repository
+"data-pipelines" not found`, which made `build` and `build-dashboard` fail, which
+made both deploy jobs *skip*. The run showed as failed, but the failure looked
+like a build problem rather than what it was: the registry the whole pipeline
+pushes to had been deleted out from under it. The live services kept serving
+their previous revisions the entire time, so nothing was visibly broken.
+
+`us-central1-docker.pkg.dev/<PROJECT_ID>/data-pipelines` is created by
+`projects/02-orchestrated-elt/cloud_run/deploy.sh`, which is a manual deploy
+script CI never calls, and it is **not** in P04's Terraform -- the modules are
+bigquery, cloud_run, gcs, iam, pubsub, scheduler, with no artifact_registry. So
+the CI pipeline depended on a one-off bootstrap nobody had written down.
+
+Both build jobs create it idempotently before pushing, and the durable fix now
+exists too: `modules/artifact_registry` in P04, wired into the root module, with
+cleanup policies bounding storage growth and `prevent_destroy` set. The existing
+repository was **imported** into state rather than recreated --
+
+    terraform import module.artifact_registry.google_artifact_registry_repository.images \
+      projects/<PROJECT_ID>/locations/us-central1/repositories/data-pipelines
+
+-- so no image was lost. The CI ensure-step stays as belt and braces, because
+nothing applies Terraform automatically in this repo; `terraform fmt -check` is
+the only Terraform gate CI runs.
+
+Recreate by hand with:
+
+```bash
+gcloud artifacts repositories create data-pipelines \
+  --repository-format=docker --location=us-central1 --project <PROJECT_ID>
+```
+
+### Deploys are canaries, not pushes
+
+`deploy-dashboard` ships each revision with `--no-traffic --tag=canary`, smoke-tests it on
+its tagged URL, and only then runs `update-traffic --to-latest`. If the smoke test fails,
+traffic was never moved: the previous revision is still serving, and the job reports that
+rather than rolling anything back, because there is nothing to roll back.
+
+Two exemptions in `dashboard/main.py` are load-bearing here, and removing either breaks
+every deploy *silently* rather than loudly:
+
+- **`/health` never redirects.** The smoke test addresses a revision directly and needs that
+  revision's own answer.
+- **Hostnames containing `---` never redirect.** That is Cloud Run's tagged-revision form,
+  `<tag>---<service>-<hash>.a.run.app`, and a service name cannot contain consecutive
+  hyphens, so the marker is unambiguous. Without this the canary URL would 301 to the
+  canonical host, so the smoke test would exercise *the revision being replaced*, pass, and
+  promote code nobody tested.
+
+Both are covered by tests confirmed to fail when the exemption is removed.
+
+The smoke test asserts content, not just status. A 200 proves nothing: on 2026-08-14 the
+dashboard served its shell perfectly while every panel reported `Not found: Table
+dev_claims_analytics.fct_claims`. It requires `BigQuery Connected` and the absence of any
+query-failure marker, then checks all five remaining routes.
+
+P02 deliberately does not get this. It is IAM-gated and internal, so smoke-testing it means
+minting an identity token per request -- real complexity around a surface no visitor
+reaches. It gets a revision-ready check instead.
+
+### The health check alerts, and closes itself
+
+`health-check.yml` runs daily rather than weekly, and files a GitHub issue on failure,
+reusing one open issue instead of filing one per run. A green run closes it, so an open
+`health-check` issue always means "broken right now". It asserts three things: the canonical
+host serves 200, the overview reports `BigQuery Connected` with no query errors, and the
+provider URL still 301s. The cadence change is deliberate; the reasoning is written into the
+workflow next to the cron.
+
 ### Maintenance rules
 
 - Each `projects/<name>/README.md` **Deployment** section must list its own URL (if any), and that URL must match this registry.
@@ -151,8 +224,25 @@ queries far inside the free tier, with `max_bytes_billed` capped at 10 GiB per q
   whichever hostname served the page and needs no CORS.
 - **Runtime env vars for Cloud Run services** are injected by the deploy jobs via the `env_vars:` input of `google-github-actions/deploy-cloudrun@v2`, not stored on the service. This is load-bearing: the dashboard previously shipped with zero env vars across 3 revisions and crashed at import on a missing `GCP_PROJECT_ID`. The workflow is now the single source of truth -- every new revision ships with the required vars. When adding a new runtime env var, add it to the relevant deploy job's `env_vars` block rather than running `gcloud run services update` manually. Dashboard code (`utils/bq_client.py`) reads `GCP_PROJECT_ID` first, falls back to Google's conventional `GOOGLE_CLOUD_PROJECT`, and raises a clear `RuntimeError` at startup if neither is set -- so a missed CI injection surfaces as an obvious boot-time error, not a silent `KeyError` on every page load.
 - **Scheduled health-check** at `.github/workflows/health-check.yml` pings Public-visibility URLs on a weekly cron and fails on non-200. Only URLs in this registry marked `Public` should be added to that workflow; `Internal` URLs are owner-only and not health-checked from CI.
-- **ruff is pinned, on purpose.** The lint job installed `ruff>=0.4.0` until 2026-08-14, which resolves to whatever is newest when the job runs -- so the gate's verdict tracked ruff's release schedule rather than this repo. 0.16.3 shipped, enabled rules the code predates, and P02 started failing with 10 findings in files untouched since the last green run, blocking an unrelated PR. It is now `ruff==0.15.21`, the newest version all five linted paths pass under. Raise the pin deliberately and fix the findings the new version surfaces in that same PR. Reproduce CI locally with the pinned version, not whatever `pip install ruff` gives you.
-- **Outstanding lint debt in P02.** Those 10 findings in `projects/02-orchestrated-elt/src/` are real and deferred, not resolved: four auto-fixable `I001` import sorts, two `UP045`, one `UP035`, and three `BLE001` blind-except warnings whose fixes change error-handling behaviour. They need their own PR against P02.
+- **ruff is pinned, on purpose.** The lint job installed `ruff>=0.4.0` until 2026-08-14, which resolves to whatever is newest when the job runs -- so the gate's verdict tracked ruff's release schedule rather than this repo. 0.16.3 shipped, enabled rules the code predates, and P02 started failing with 10 findings in files untouched since the last green run, blocking an unrelated PR. It is now `ruff==0.16.4`, raised from 0.15.21 with every finding it surfaced fixed in the same PR. Keep doing it that way, and reproduce CI locally with the pinned version rather than whatever `pip install ruff` gives you.
+- **P02 lint debt is cleared.** The nine mechanical findings were auto-fixed. Of the three
+  `BLE001` blind-excepts, only one was a real defect: `_row_counts_for_layer` in `assets.py`
+  swallowed the exception into a `-1` sentinel with no trace, so a missing table and a
+  permissions error looked identical in the Dagster UI. It logs with `exc_info` now, and
+  ruff stops flagging BLE001 once the error goes somewhere, so that site needs no `noqa`.
+  The two in `runner.py` keep their broad catch behind a `noqa` with the reason written
+  next to it: `execute_sql_layer` returns partial results plus the list of files that
+  failed, and `run_full_pipeline` is the outermost boundary that turns any failure into a
+  reportable result. Narrowing either would change the contract the project is built on.
+- **The dashboard is linted and tested now.** It was the only public-facing service in the
+  repo with neither. The lint steps all targeted `src/` and it lives in `dashboard/`; the
+  E501 on the vendor-minified PostHog loader is handled by a per-file ignore in P01's
+  `pyproject.toml` rather than by mangling the JavaScript that ships. Its 16 tests cover the
+  canonical redirect and the `/ingest` proxy and touch neither the network nor GCP -- the
+  startup cache warm is stubbed and the upstream is faked. They live under a `pytest.ini` of
+  their own: without it pytest walks up to P01's `pyproject.toml`, whose `pythonpath =
+  ["src"]` puts the DuckDB pipeline's `main.py` ahead of the dashboard's, and `import main`
+  silently resolves to the wrong module.
 
 ## Conventions
 

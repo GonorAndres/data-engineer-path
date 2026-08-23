@@ -33,3 +33,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# The PostHog loader is vendor-minified JavaScript inside a string literal.
+# It is one 1,178-character line by construction and cannot be wrapped without
+# altering the code that ships to the browser.
+"dashboard/utils/analytics.py" = ["E501"]

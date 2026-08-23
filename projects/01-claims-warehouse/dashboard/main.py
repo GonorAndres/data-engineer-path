@@ -15,9 +15,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.gzip import GZipMiddleware
-
-from utils.bq_client import query_bq, DATASET_ANALYTICS, DATASET_REPORTS
 from utils.analytics import CANONICAL_HOST, POSTHOG_SNIPPET
+from utils.bq_client import DATASET_ANALYTICS, DATASET_REPORTS, query_bq
 
 log = logging.getLogger("dashboard")
 
@@ -120,6 +119,33 @@ def _ctx(active_page: str, **extra):
     }
 
 
+# Paths that must answer on whatever hostname asked for them, never redirect.
+#
+#   /ingest  -- a 301 on a POST loses the body in most clients, which would
+#               silently drop analytics events from any page still loaded on a
+#               run.app hostname.
+#   /health  -- an operational endpoint. Uptime checks and the post-deploy smoke
+#               test address a revision directly and need its own answer, not a
+#               redirect to whatever the canonical host currently serves.
+NO_REDIRECT_PREFIXES = ("/ingest", "/health")
+
+
+def _is_canary_host(host: str) -> bool:
+    """True for a Cloud Run tagged-revision hostname.
+
+    Tagged revisions are addressed as `<tag>---<service>-<hash>.a.run.app`. That
+    triple hyphen cannot occur in a service name -- Cloud Run rejects consecutive
+    hyphens -- so it is an unambiguous marker.
+
+    These have to be exempt. The deploy pipeline ships each revision with no
+    traffic, smoke-tests it on its tagged URL, and only then moves traffic over.
+    Redirecting that URL would send the smoke test to the *currently live*
+    revision, so every deploy would test the old code and pass while shipping
+    anything at all.
+    """
+    return "---" in host
+
+
 @app.middleware("http")
 async def canonical_host_redirect(request: Request, call_next):
     """301 the Cloud Run hostnames onto the custom domain.
@@ -127,16 +153,12 @@ async def canonical_host_redirect(request: Request, call_next):
     Cloud Run keeps answering on both `<service>-<hash>-<region>.a.run.app` and
     `<service>-<project-number>.<region>.run.app` after a domain mapping is added --
     the mapping is an extra route in, never a replacement. Left alone that splits
-    traffic across three hostnames and scatters the search ranking. There are no
-    preview hostnames to protect on Cloud Run, so matching the `.run.app` suffix is
-    both safe and simpler than listing each form.
+    traffic across three hostnames and scatters the search ranking. Matching the
+    `.run.app` suffix covers both forms without enumerating them.
     """
-    if REDIRECT_TO_CANONICAL and not request.url.path.startswith("/ingest"):
-        # /ingest is exempt: a 301 on a POST loses the body in most clients, so
-        # redirecting it would silently drop analytics events from any page still
-        # loaded on a run.app hostname.
+    if REDIRECT_TO_CANONICAL and not request.url.path.startswith(NO_REDIRECT_PREFIXES):
         host = request.url.hostname or ""
-        if host.endswith(".run.app"):
+        if host.endswith(".run.app") and not _is_canary_host(host):
             target = request.url.replace(scheme="https", netloc=REDIRECT_TO_CANONICAL)
             return RedirectResponse(str(target), status_code=301)
     return await call_next(request)
@@ -372,8 +394,8 @@ async def pricing_adequacy(request: Request):
             "labels": pie_df["pricing_assessment"].tolist(),
             "values": pie_df["cnt"].tolist(),
             "colors": [
-                color_map.get(l, "#94A3B8")
-                for l in pie_df["pricing_assessment"]
+                color_map.get(label, "#94A3B8")
+                for label in pie_df["pricing_assessment"]
             ],
         }
 
@@ -399,7 +421,10 @@ async def pricing_adequacy(request: Request):
             .mean()
             .sort_values("avg_ratio", ascending=False)
         )
-        state_bar = {"x": state_agg["state_risk_group"].tolist(), "y": state_agg["avg_ratio"].tolist()}
+        state_bar = {
+            "x": state_agg["state_risk_group"].tolist(),
+            "y": state_agg["avg_ratio"].tolist(),
+        }
 
         top_sql = f"""
         SELECT policy_id, coverage_type, age_band, state_risk_group,

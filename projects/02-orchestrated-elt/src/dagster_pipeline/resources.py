@@ -5,8 +5,8 @@ The resource is configurable: pass a ``db_path`` for a persistent database
 or omit it (default ``":memory:"``) for ephemeral runs and testing.
 """
 
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import duckdb
 from dagster import ConfigurableResource

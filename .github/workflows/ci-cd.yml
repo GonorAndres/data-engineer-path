@@ -102,14 +102,14 @@ jobs:
             projects/06-pricing-ml-pipeline/pyproject.toml
 
       - name: Install ruff
-        # Pinned deliberately. `ruff>=0.4.0` resolves to whatever is newest at
-        # run time, so the lint job's verdict drifts with no change to this
+        # Pinned deliberately. `ruff>=0.4.0` resolved to whatever was newest at
+        # run time, so the lint job's verdict drifted with no change to this
         # repo: 0.16.3 turned on rules the code predates and failed P02 with 10
         # findings in files nobody had touched since the last green run. A
         # linter that can fail a PR because of its own release schedule is not
         # a gate, it is a coin flip. Bump this on purpose, with the findings
-        # fixed in the same PR.
-        run: pip install ruff==0.15.21
+        # fixed in the same PR -- which is what raising it to 0.16.4 did.
+        run: pip install ruff==0.16.4
 
       - name: Lint Project 01 (Claims Warehouse)
         run: ruff check projects/01-claims-warehouse/src/
@@ -128,6 +128,14 @@ jobs:
 
       - name: Lint Project 06 (Pricing ML Pipeline)
         run: ruff check projects/06-pricing-ml-pipeline/src/
+
+      # The dashboard is the only publicly reachable service in the repo and
+      # went unlinted until 2026-08-23 -- the lint steps above all target
+      # `src/`, and it lives in `dashboard/`.  It picks up P01's ruff config,
+      # including the per-file E501 ignore for the vendor-minified PostHog
+      # loader.
+      - name: Lint Project 01 dashboard (public service)
+        run: ruff check projects/01-claims-warehouse/dashboard/
 
       - name: Check formatting
         run: ruff format --check projects/01-claims-warehouse/src/ projects/02-orchestrated-elt/src/ projects/03-streaming-claims-intake/src/ projects/05-streaming-claims-pipeline/src/ projects/06-pricing-ml-pipeline/src/
@@ -177,6 +185,22 @@ jobs:
         run: |
           cd projects/01-claims-warehouse
           python -m pytest tests/ -v --tb=short --junitxml=../../test-results/project01.xml
+
+      # -- Project 01 dashboard: the public FastAPI service --------------------
+      # Separate from the P01 step above: the dashboard has its own
+      # requirements.txt and its own pytest root.  Covers the canonical-host
+      # redirect and the same-origin PostHog proxy, neither of which had any
+      # test until 2026-08-23.  No network and no GCP calls -- the cache warm is
+      # stubbed and the upstream is faked.
+      - name: Install Project 01 dashboard dependencies
+        run: |
+          cd projects/01-claims-warehouse/dashboard
+          pip install -r requirements.txt pytest
+
+      - name: Run Project 01 dashboard tests
+        run: |
+          cd projects/01-claims-warehouse/dashboard
+          python -m pytest -v --tb=short --junitxml=../../../test-results/dashboard.xml
 
       # -- Project 02: Orchestrated ELT ---------------------------------------
       - name: Install Project 02 dependencies
@@ -300,6 +324,24 @@ jobs:
         if: steps.auth.outcome == 'success'
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
+      # The `data-pipelines` repository was never declared anywhere CI runs.
+      # `cloud_run/deploy.sh` creates it, but that script is for manual deploys
+      # and the workflow does not call it, so the pipeline silently depended on
+      # a one-off bootstrap.  On 2026-08-23 the repository was gone, both image
+      # pushes failed with `Repository "data-pipelines" not found`, and both
+      # deploy jobs were skipped -- a green-looking merge that shipped nothing.
+      # Creating it here is idempotent: `|| true` swallows the ALREADY_EXISTS
+      # that every subsequent run returns.
+      - name: Ensure the Artifact Registry repository exists
+        if: steps.auth.outcome == 'success'
+        run: |
+          gcloud artifacts repositories create data-pipelines \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --description="Container images for data-engineer-path CI/CD" \
+            --project="${{ secrets.GCP_PROJECT_ID }}" 2>/dev/null \
+            || echo "Repository data-pipelines already exists."
+
       - name: Push to Artifact Registry
         if: steps.auth.outcome == 'success'
         run: |
@@ -356,6 +398,26 @@ jobs:
             --min-instances=0
             --no-allow-unauthenticated
 
+      # Deliberately NOT the canary flow the dashboard uses.  This service is
+      # IAM-gated and internal, so smoke-testing it means minting an identity
+      # token for every request -- real complexity to protect a surface no
+      # visitor reaches.  What is worth catching is a revision that deploys but
+      # never becomes ready, which this does.
+      - name: Verify the new revision became ready
+        if: steps.deploy.outcome == 'success'
+        run: |
+          READY=$(gcloud run services describe "${{ env.SERVICE_NAME }}" \
+            --region="${{ env.GCP_REGION }}" --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --format="value(status.latestReadyRevisionName)")
+          CREATED=$(gcloud run services describe "${{ env.SERVICE_NAME }}" \
+            --region="${{ env.GCP_REGION }}" --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --format="value(status.latestCreatedRevisionName)")
+          echo "created=$CREATED ready=$READY"
+          if [ "$READY" != "$CREATED" ]; then
+            echo "::error title=Revision not ready::$CREATED was created but $READY is still the newest ready revision"
+            exit 1
+          fi
+
       - name: Show deployment URL
         if: steps.deploy.outcome == 'success'
         run: |
@@ -409,6 +471,24 @@ jobs:
         if: steps.auth.outcome == 'success'
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
+      # The `data-pipelines` repository was never declared anywhere CI runs.
+      # `cloud_run/deploy.sh` creates it, but that script is for manual deploys
+      # and the workflow does not call it, so the pipeline silently depended on
+      # a one-off bootstrap.  On 2026-08-23 the repository was gone, both image
+      # pushes failed with `Repository "data-pipelines" not found`, and both
+      # deploy jobs were skipped -- a green-looking merge that shipped nothing.
+      # Creating it here is idempotent: `|| true` swallows the ALREADY_EXISTS
+      # that every subsequent run returns.
+      - name: Ensure the Artifact Registry repository exists
+        if: steps.auth.outcome == 'success'
+        run: |
+          gcloud artifacts repositories create data-pipelines \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --description="Container images for data-engineer-path CI/CD" \
+            --project="${{ secrets.GCP_PROJECT_ID }}" 2>/dev/null \
+            || echo "Repository data-pipelines already exists."
+
       - name: Push Dashboard image to Artifact Registry
         if: steps.auth.outcome == 'success'
         run: |
@@ -446,7 +526,12 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
 
-      - name: Deploy Dashboard to Cloud Run
+      # Ship the revision with NO traffic and a `canary` tag.  Until the smoke
+      # test below passes, the previously deployed revision keeps serving every
+      # visitor, so a revision that boots but renders BigQuery errors never
+      # reaches anyone.  Before this, CI deployed and stopped -- a broken
+      # revision would have served the public until the weekly health-check.
+      - name: Deploy Dashboard to Cloud Run (no traffic, tagged canary)
         id: deploy
         if: steps.auth.outcome == 'success'
         uses: google-github-actions/deploy-cloudrun@v2
@@ -468,7 +553,90 @@ jobs:
             --max-instances=2
             --min-instances=0
             --allow-unauthenticated
+            --no-traffic
+            --tag=canary
 
-      - name: Show Dashboard deployment URL
+      # `steps.deploy.outputs.url` is the *service* URL, which still points at
+      # the old revision while traffic is unmoved.  The canary URL is the only
+      # address that reaches the new one.
+      - name: Resolve the canary URL
+        id: canary
         if: steps.deploy.outcome == 'success'
-        run: echo "Dashboard deployed to ${{ steps.deploy.outputs.url }}"
+        run: |
+          # Parsed in Python rather than a gcloud --format projection: the
+          # filter/extract syntax fails silently to an empty string when the
+          # shape changes, and an empty URL would let the smoke test be skipped
+          # rather than fail.  Kept on one line -- YAML block scalars preserve
+          # relative indentation, and indented input to `python3 -c` is a syntax
+          # error.
+          URL=$(gcloud run services describe "${{ env.DASHBOARD_SERVICE_NAME }}" \
+            --region="${{ env.GCP_REGION }}" --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --format=json | python3 -c "import json,sys; t=json.load(sys.stdin).get('status',{}).get('traffic',[]); print(next((x['url'] for x in t if x.get('tag')=='canary' and x.get('url')), ''))")
+          if [ -z "$URL" ]; then
+            echo "::error title=No canary URL::the tagged revision has no URL"
+            exit 1
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Canary: $URL"
+
+      # The app exempts `/health` and any `---` tagged host from the canonical
+      # redirect precisely so this can work; without those exemptions the smoke
+      # test would be answered by the revision it is meant to replace.
+      - name: Smoke-test the canary revision
+        id: smoke
+        if: steps.canary.outcome == 'success'
+        run: |
+          URL="${{ steps.canary.outputs.url }}"
+
+          # Retry: a scale-to-zero service cold-starts, and the first BigQuery
+          # query on a fresh container is slower than the steady state.
+          for i in $(seq 1 10); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$URL/health" || true)
+            [ "$CODE" = "200" ] && break
+            echo "attempt $i: /health -> $CODE"
+            sleep 6
+          done
+          if [ "$CODE" != "200" ]; then
+            echo "::error title=Canary unhealthy::/health returned $CODE"
+            exit 1
+          fi
+
+          BODY=$(curl -s --max-time 60 "$URL/")
+          # A 200 is not enough: the page renders its shell even when every
+          # panel is failing.  On 2026-08-14 it returned 200 while every query
+          # reported `Not found: Table dev_claims_analytics.fct_claims`.
+          if ! printf '%s' "$BODY" | grep -q "BigQuery Connected"; then
+            echo "::error title=Canary has no data::overview did not report BigQuery Connected"
+            exit 1
+          fi
+          if printf '%s' "$BODY" | grep -qE "Could not load KPI|Not found: Table"; then
+            echo "::error title=Canary rendering errors::overview reported a query failure"
+            exit 1
+          fi
+
+          for p in loss-triangle portfolio-health pricing-adequacy geographic-risk how-its-built; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL/$p")
+            echo "  /$p -> $CODE"
+            [ "$CODE" = "200" ] || { echo "::error title=Canary route failed::/$p returned $CODE"; exit 1; }
+          done
+          echo "Canary passed all checks."
+
+      # Only now does the public start seeing it.
+      - name: Promote the canary to 100% traffic
+        if: steps.smoke.outcome == 'success'
+        run: |
+          gcloud run services update-traffic "${{ env.DASHBOARD_SERVICE_NAME }}" \
+            --region="${{ env.GCP_REGION }}" --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --to-latest
+          echo "Dashboard promoted: ${{ steps.deploy.outputs.url }}"
+
+      # Reached only when the smoke test failed.  Traffic was never moved, so
+      # the previous revision is still serving -- this reports that rather than
+      # performing a rollback, because there is nothing to roll back.
+      - name: Report that traffic was NOT moved
+        if: failure() && steps.deploy.outcome == 'success'
+        run: |
+          echo "::error title=Deploy halted::the canary failed its smoke test and traffic was left on the previous revision. The site is still up on the old code."
+          gcloud run services describe "${{ env.DASHBOARD_SERVICE_NAME }}" \
+            --region="${{ env.GCP_REGION }}" --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --format="table(status.traffic)" || true
