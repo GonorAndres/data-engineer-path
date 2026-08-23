@@ -216,6 +216,16 @@ async def how_its_built(request: Request):
     )
 
 
+@app.get("/methodology", response_class=HTMLResponse)
+async def methodology(request: Request):
+    # Static prose. Nothing here touches BigQuery, so the page keeps
+    # rendering even when the warehouse is mid-rebuild.
+    return templates.TemplateResponse(
+        request, "methodology.html",
+        context=_ctx("methodology"),
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     kpis = None

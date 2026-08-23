@@ -17,6 +17,12 @@
     is version-controlled, CI/CD-tested, and documented with decision rationale.
 </p>
 
+<p class="section-context mb-6">
+    This page is the inventory of what exists. For the reasoning behind it &mdash; how an actuarial
+    question becomes a table, which layer owns which decision, and what is deliberately missing &mdash;
+    see <a href="/methodology" class="underline hover:text-slate-900">Methodology</a>.
+</p>
+
 <div class="card p-5 mb-6 overflow-x-auto">
     <h3 class="text-sm font-semibold text-slate-700 mb-4">End-to-End Pipeline</h3>
     <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -83,7 +89,7 @@
             <span class="text-xs font-bold text-white bg-emerald-600 rounded px-1.5 py-0.5 mt-0.5">P04</span>
             <div>
                 <span class="font-semibold text-slate-800 text-[14px]">Infrastructure as Code</span>
-                <p class="text-[13px] text-slate-500 mt-1">Every GCP resource behind P01 to P03 is defined in Terraform: reusable modules for BigQuery, GCS, Pub/Sub, Cloud Run and IAM, with dev and prod separated by variable-driven naming. CI plans on the pull request and applies on merge, authenticating through Workload Identity Federation so there are no service account keys to leak.</p>
+                <p class="text-[13px] text-slate-500 mt-1">Every GCP resource behind P01 to P03 is defined in Terraform: reusable modules for BigQuery, GCS, Pub/Sub, Cloud Run and IAM, with dev and prod separated by variable-driven naming. CI checks formatting on every pull request and authenticates to GCP through Workload Identity Federation, so there are no service account keys to leak anywhere in the pipeline. Plans and applies are still run by hand &mdash; <a href="/methodology" class="underline hover:text-slate-700">Methodology</a> lists that as an open gap rather than pretending otherwise.</p>
             </div>
         </div>
     </div>
@@ -128,6 +134,12 @@
     salen analíticos interactivos listos para tomar decisiones. Cada capa intermedia (ingesta,
     transformación, calidad, orquestación y despliegue) está versionada en Git, validada por CI/CD
     y documentada con el razonamiento detrás de cada decisión técnica.
+</p>
+
+<p class="section-context mb-6">
+    Esta página es el inventario de lo que existe. Para el razonamiento detrás &mdash; cómo una pregunta
+    actuarial se vuelve una tabla, qué capa es dueña de cada decisión, y qué falta a propósito &mdash;
+    ve <a href="/methodology" class="underline hover:text-slate-900">Metodología</a>.
 </p>
 
 <div class="card p-5 mb-6 overflow-x-auto">
@@ -196,7 +208,7 @@
             <span class="text-xs font-bold text-white bg-emerald-600 rounded px-1.5 py-0.5 mt-0.5">P04</span>
             <div>
                 <span class="font-semibold text-slate-800 text-[14px]">Infraestructura como Código</span>
-                <p class="text-[13px] text-slate-500 mt-1">Cada recurso de GCP detrás de P01 a P03 está definido en Terraform: módulos reutilizables para BigQuery, GCS, Pub/Sub, Cloud Run e IAM, con dev y prod separados por nombres derivados de variables. CI ejecuta el plan en el pull request y aplica al hacer merge, autenticándose con Workload Identity Federation para no tener llaves de cuenta de servicio que se puedan filtrar.</p>
+                <p class="text-[13px] text-slate-500 mt-1">Cada recurso de GCP detrás de P01 a P03 está definido en Terraform: módulos reutilizables para BigQuery, GCS, Pub/Sub, Cloud Run e IAM, con dev y prod separados por nombres derivados de variables. CI valida el formato en cada pull request y se autentica con GCP mediante Workload Identity Federation, así que no hay llaves de cuenta de servicio que se puedan filtrar en ningún punto del pipeline. Los planes y los applies todavía se corren a mano &mdash; <a href="/methodology" class="underline hover:text-slate-700">Metodología</a> lo declara como un pendiente abierto en vez de aparentar lo contrario.</p>
             </div>
         </div>
     </div>
