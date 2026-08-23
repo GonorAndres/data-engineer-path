@@ -27,9 +27,23 @@ function waitForPlotly(cb) {
     var t = setInterval(function() { if (window.Plotly) { clearInterval(t); cb(); } }, 50);
 }
 
+// Tracked in the DOM's terms, not localStorage's: every page renders EN-first,
+// so this starts at 'en' regardless of what a previous page stored.
+var currentLang = 'en';
+
 function setLang(lang) {
+    // Clicking the already-active language must be a no-op: .lang-enter is
+    // added on reveal, and adding it to elements that are already visible
+    // would fade the whole page for no reason.
+    if (lang === currentLang) return;
+    currentLang = lang;
     document.querySelectorAll('[data-lang]').forEach(function(el) {
-        el.classList.toggle('hidden', el.dataset.lang !== lang);
+        var show = el.dataset.lang === lang;
+        el.classList.toggle('hidden', !show);
+        // The class only needs adding once. `hidden` is display:none, and a
+        // CSS animation restarts each time an element returns from
+        // display:none -- so later toggles replay the fade on their own.
+        if (show) el.classList.add('lang-enter');
     });
     document.getElementById('btn-en').classList.toggle('lang-toggle-active', lang === 'en');
     document.getElementById('btn-es').classList.toggle('lang-toggle-active', lang === 'es');
@@ -44,8 +58,14 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('click', function(e) {
     var link = e.target.closest('a[href^="/"]');
     if (!link || link.getAttribute('href') === window.location.pathname) return;
+    // One bar at a time, and gone when its animation ends: without the
+    // cleanup, every navigation click leaked an invisible fixed div pinned
+    // over the top of the viewport at z-index 9999.
+    var prev = document.querySelector('.nav-progress');
+    if (prev) prev.remove();
     var bar = document.createElement('div');
     bar.className = 'nav-progress';
+    bar.addEventListener('animationend', function() { bar.remove(); });
     document.body.appendChild(bar);
 });
 
