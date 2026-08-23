@@ -300,6 +300,24 @@ jobs:
         if: steps.auth.outcome == 'success'
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
+      # The `data-pipelines` repository was never declared anywhere CI runs.
+      # `cloud_run/deploy.sh` creates it, but that script is for manual deploys
+      # and the workflow does not call it, so the pipeline silently depended on
+      # a one-off bootstrap.  On 2026-08-23 the repository was gone, both image
+      # pushes failed with `Repository "data-pipelines" not found`, and both
+      # deploy jobs were skipped -- a green-looking merge that shipped nothing.
+      # Creating it here is idempotent: `|| true` swallows the ALREADY_EXISTS
+      # that every subsequent run returns.
+      - name: Ensure the Artifact Registry repository exists
+        if: steps.auth.outcome == 'success'
+        run: |
+          gcloud artifacts repositories create data-pipelines \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --description="Container images for data-engineer-path CI/CD" \
+            --project="${{ secrets.GCP_PROJECT_ID }}" 2>/dev/null \
+            || echo "Repository data-pipelines already exists."
+
       - name: Push to Artifact Registry
         if: steps.auth.outcome == 'success'
         run: |
@@ -408,6 +426,24 @@ jobs:
       - name: Configure Docker for Artifact Registry
         if: steps.auth.outcome == 'success'
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # The `data-pipelines` repository was never declared anywhere CI runs.
+      # `cloud_run/deploy.sh` creates it, but that script is for manual deploys
+      # and the workflow does not call it, so the pipeline silently depended on
+      # a one-off bootstrap.  On 2026-08-23 the repository was gone, both image
+      # pushes failed with `Repository "data-pipelines" not found`, and both
+      # deploy jobs were skipped -- a green-looking merge that shipped nothing.
+      # Creating it here is idempotent: `|| true` swallows the ALREADY_EXISTS
+      # that every subsequent run returns.
+      - name: Ensure the Artifact Registry repository exists
+        if: steps.auth.outcome == 'success'
+        run: |
+          gcloud artifacts repositories create data-pipelines \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --description="Container images for data-engineer-path CI/CD" \
+            --project="${{ secrets.GCP_PROJECT_ID }}" 2>/dev/null \
+            || echo "Repository data-pipelines already exists."
 
       - name: Push Dashboard image to Artifact Registry
         if: steps.auth.outcome == 'success'
