@@ -9,6 +9,7 @@ Dagster-native metadata (row counts, timing) so the Dagster UI shows
 lineage and observability out of the box.
 """
 
+import logging
 import sys
 import time
 from pathlib import Path
@@ -21,9 +22,10 @@ from dagster import (
     RetryPolicy,
     asset,
 )
-
 from dagster_pipeline.resources import DuckDBResource
 from pipeline.config import DATA_DIR, SQL_DIR, SQL_LAYERS
+
+log = logging.getLogger(__name__)
 
 # Add Project 1's src/ to the import path so we can use the data generator.
 _PROJECT_01_SRC = (
@@ -60,6 +62,21 @@ def _row_counts_for_layer(
                     result = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
                     counts[table] = result[0] if result else 0
                 except Exception:
+                    # Logging the exception is what makes this blind catch
+                    # legitimate rather than suppressed -- ruff stops flagging
+                    # BLE001 once the error actually goes somewhere.
+                    #
+                    # Row counts are observability, not pipeline state: a table
+                    # that cannot be counted must not fail the materialization
+                    # that just built the other fifteen.  -1 is the sentinel the
+                    # Dagster metadata renders as "unknown".
+                    #
+                    # This used to swallow the exception with no trace anywhere,
+                    # so a missing table and a permissions error looked identical
+                    # in the UI.  Narrowing to duckdb.Error instead would let an
+                    # unrelated failure escape and take the asset down, which is
+                    # the behaviour the sentinel exists to avoid.
+                    log.warning("Row count failed for %s", table, exc_info=True)
                     counts[table] = -1
             break
     return counts

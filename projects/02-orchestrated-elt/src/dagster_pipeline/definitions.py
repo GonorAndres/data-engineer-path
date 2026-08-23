@@ -15,7 +15,6 @@ from dagster import (
     Definitions,
     ScheduleDefinition,
 )
-
 from dagster_pipeline.assets import (
     intermediate_layer,
     marts_layer,

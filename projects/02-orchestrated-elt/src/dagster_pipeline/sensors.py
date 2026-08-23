@@ -7,8 +7,6 @@ detected, the sensor emits a ``RunRequest`` that materializes the full
 asset graph.
 """
 
-from typing import Optional
-
 from dagster import (
     AssetSelection,
     RunConfig,
@@ -16,7 +14,6 @@ from dagster import (
     SensorEvaluationContext,
     sensor,
 )
-
 from pipeline.config import WATCH_DIR
 
 # We persist the set of already-seen filenames in the sensor cursor
@@ -24,7 +21,7 @@ from pipeline.config import WATCH_DIR
 _CURSOR_SEPARATOR = "|"
 
 
-def _parse_cursor(cursor: Optional[str]) -> set[str]:
+def _parse_cursor(cursor: str | None) -> set[str]:
     """Decode the cursor string into a set of known filenames."""
     if not cursor:
         return set()
@@ -47,7 +44,7 @@ def _encode_cursor(known: set[str]) -> str:
 )
 def new_data_sensor(
     context: SensorEvaluationContext,
-) -> Optional[RunRequest]:
+) -> RunRequest | None:
     """Check for new CSV files and trigger a run if any are found.
 
     The sensor maintains a cursor that tracks which files have already

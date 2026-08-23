@@ -102,14 +102,14 @@ jobs:
             projects/06-pricing-ml-pipeline/pyproject.toml
 
       - name: Install ruff
-        # Pinned deliberately. `ruff>=0.4.0` resolves to whatever is newest at
-        # run time, so the lint job's verdict drifts with no change to this
+        # Pinned deliberately. `ruff>=0.4.0` resolved to whatever was newest at
+        # run time, so the lint job's verdict drifted with no change to this
         # repo: 0.16.3 turned on rules the code predates and failed P02 with 10
         # findings in files nobody had touched since the last green run. A
         # linter that can fail a PR because of its own release schedule is not
         # a gate, it is a coin flip. Bump this on purpose, with the findings
-        # fixed in the same PR.
-        run: pip install ruff==0.15.21
+        # fixed in the same PR -- which is what raising it to 0.16.4 did.
+        run: pip install ruff==0.16.4
 
       - name: Lint Project 01 (Claims Warehouse)
         run: ruff check projects/01-claims-warehouse/src/

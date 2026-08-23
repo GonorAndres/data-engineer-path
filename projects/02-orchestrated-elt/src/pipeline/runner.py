@@ -22,7 +22,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import duckdb
-
 from pipeline.config import DATA_DIR, RAW_TABLES, SQL_DIR, SQL_LAYERS
 
 # ---------------------------------------------------------------------------
@@ -160,7 +159,12 @@ class PipelineRunner:
                     f"SELECT COUNT(*) FROM {table_name}"
                 ).fetchone()[0]
                 result.tables[table_name] = count
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 -- see below
+                # execute_sql_layer's contract is to attempt every file in the
+                # layer and hand back a result carrying whichever ones failed,
+                # so the caller can report all of them at once.  Narrowing this
+                # to duckdb.Error would let an OSError or UnicodeDecodeError
+                # from read_text propagate and abandon the remaining files.
                 result.errors.append(f"{sql_file}: {exc}")
 
         result.elapsed_seconds = round(time.monotonic() - start, 3)
@@ -198,7 +202,11 @@ class PipelineRunner:
                     )
                     break
 
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 -- see below
+            # Outermost boundary of the pipeline.  Its job is to convert any
+            # failure into a result object the scheduler and the Cloud Run
+            # handler can report on, rather than a traceback escaping into an
+            # HTTP 500 with no record of which layer died.
             pipeline_result.success = False
             pipeline_result.error_message = str(exc)
 
