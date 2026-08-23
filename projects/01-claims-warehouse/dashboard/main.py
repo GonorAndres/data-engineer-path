@@ -208,12 +208,12 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/how-its-built", response_class=HTMLResponse)
-async def how_its_built(request: Request):
-    return templates.TemplateResponse(
-        request, "how_its_built.html",
-        context=_ctx("how_its_built"),
-    )
+@app.get("/how-its-built")
+async def how_its_built():
+    # Merged into /methodology. The route stays as a 301 rather than a 404 so
+    # anything already pointing here -- search results, an old CV link -- still
+    # lands on the content instead of dead-ending.
+    return RedirectResponse("/methodology", status_code=301)
 
 
 @app.get("/methodology", response_class=HTMLResponse)

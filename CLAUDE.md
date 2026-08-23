@@ -179,7 +179,7 @@ Both are covered by tests confirmed to fail when the exemption is removed.
 The smoke test asserts content, not just status. A 200 proves nothing: on 2026-08-14 the
 dashboard served its shell perfectly while every panel reported `Not found: Table
 dev_claims_analytics.fct_claims`. It requires `BigQuery Connected` and the absence of any
-query-failure marker, then checks all six remaining routes.
+query-failure marker, then checks all five remaining routes.
 
 P02 deliberately does not get this. It is IAM-gated and internal, so smoke-testing it means
 minting an identity token per request -- real complexity around a surface no visitor

@@ -10,20 +10,131 @@
 <!-- ─── ENGLISH ─────────────────────────────────── -->
 <div data-lang="en">
 
-<p class="section-context mb-2">
-    <a href="/how-its-built" class="underline hover:text-slate-900">How It's Built</a> is the inventory:
-    the six projects, the services, the diagram. This page is the <strong>method</strong> &mdash; how an
-    actuarial question turns into a table somebody else can trust, and which decisions along the way
-    were engineering decisions in disguise.
-</p>
-<p class="section-context mb-6">
-    It is written to be useful twice: as evidence of how I work, and as a reference for anyone building
-    something similar on Google Cloud with insurance data. Every claim below points at a file in
-    <a href="https://github.com/GonorAndres/data-engineer-path" class="underline hover:text-slate-900" target="_blank" rel="noopener">the repository</a>.
-</p>
+<div class="card overflow-hidden mb-6">
+    <picture>
+        <source srcset="/static/img/hero-method.webp" type="image/webp">
+        <img src="/static/img/hero-method.jpg" width="1800" height="764"
+             alt="Overhead view of a desk. An index card reads &quot;How much of 2021 is still unpaid?&quot;. Beside it a loss development triangle is worked out by hand on graph paper, its column headings crossed out and rewritten as cumulative and development, with a mechanical pencil and steel ruler across it and a small printed chart pinned to the right."
+             class="w-full block h-[190px] sm:h-[240px] lg:h-[280px] object-cover object-center">
+    </picture>
+    <div class="p-5 md:p-6">
+        <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">The whole platform, and why it is shaped this way</h2>
+        <p class="section-context mb-3">The question on that card is a real one, and answering it well is not a query. It is a decision about grain, a contract with the source data, a transformation split across layers, an assertion that fails loudly when the arithmetic stops making sense, and finally a table somebody else can use without asking you what it means. This page follows that path end to end.</p>
+        <p class="section-context">Six projects sit underneath it: a claims warehouse, an orchestrated ELT pipeline, a streaming intake, the infrastructure as Terraform, a Beam streaming job, and a pricing model. All on Google Cloud, all built here, all version-controlled and shipped by CI.</p>
+        <div class="mt-4 pt-4 border-t border-slate-100 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">If you are hiring:</strong> an actuary built every layer of this, and can say why each one is the shape it is. The six projects are the inventory; the worked example is the argument.</p>
+            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">If you are building something similar:</strong> every claim here points at a file you can open. The layering rule and the GCP choices are the parts that transfer to your own stack.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card p-4 mb-6">
+    <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2.5">On This Page</span>
+    <ol class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-[13px]">
+        <li><a href="#en-the-platform-end-to-end" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> The Platform, End to End</a></li>
+        <li><a href="#en-the-six-projects" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">2.</span> The Six Projects</a></li>
+        <li><a href="#en-four-disciplines-one-table" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Four Disciplines, One Table</a></li>
+        <li><a href="#en-how-a-question-becomes-a-table" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">4.</span> How a Question Becomes a Table</a></li>
+        <li><a href="#en-the-layering-rule" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">5.</span> The Layering Rule</a></li>
+        <li><a href="#en-actuarial-decisions-that-are-really-mo" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">6.</span> Actuarial Decisions That Are Really Modelling Decisions</a></li>
+        <li><a href="#en-what-governance-means-here" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">7.</span> What Governance Means Here</a></li>
+        <li><a href="#en-gcp-choices-and-the-case-for-the-other" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">8.</span> GCP Choices, and the Case for the Other One</a></li>
+        <li><a href="#en-what-this-deliberately-does-not-do" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">9.</span> What This Deliberately Does Not Do</a></li>
+    </ol>
+</div>
+
+<h3 id="en-the-platform-end-to-end" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">The Platform, End to End</h3>
+<div class="card p-5 mb-6 overflow-x-auto">
+    <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="30" width="110" height="56" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="55" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">CSV / Parquet</text>
+        <text x="55" y="72" text-anchor="middle" font-size="9" fill="#94A3B8">Source Data</text>
+        <rect x="158" y="30" width="110" height="56" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="213" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#1E40AF">BigQuery</text>
+        <text x="213" y="72" text-anchor="middle" font-size="9" fill="#60A5FA">Raw Tables</text>
+        <rect x="316" y="30" width="110" height="56" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="371" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#1E40AF">Dataform</text>
+        <text x="371" y="72" text-anchor="middle" font-size="9" fill="#60A5FA">stg / int / marts</text>
+        <rect x="474" y="30" width="110" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+        <text x="529" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#065F46">Quality</text>
+        <text x="529" y="72" text-anchor="middle" font-size="9" fill="#34D399">Assertions</text>
+        <rect x="632" y="30" width="110" height="56" rx="8" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.2"/>
+        <text x="687" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#9A3412">FastAPI</text>
+        <text x="687" y="72" text-anchor="middle" font-size="9" fill="#FB923C">This Dashboard</text>
+        <rect x="790" y="30" width="110" height="56" rx="8" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+        <text x="845" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#5B21B6">Cloud Run</text>
+        <text x="845" y="72" text-anchor="middle" font-size="9" fill="#A78BFA">Public URL</text>
+        <path d="M112 58 L156 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M270 58 L314 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M428 58 L472 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M586 58 L630 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <path d="M744 58 L788 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <rect x="158" y="100" width="584" height="18" rx="4" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+        <text x="450" y="113" text-anchor="middle" font-size="9" fill="#94A3B8">GitHub Actions CI/CD: lint, test, build, deploy on every push to main</text>
+        <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
+    </svg>
+</div>
+
+<h3 id="en-the-six-projects" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">The Six Projects</h3>
+<div class="space-y-3 mb-6">
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-blue-600 rounded px-1.5 py-0.5 mt-0.5">P01</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Claims Data Warehouse</span>
+                <p class="text-[13px] text-slate-500 mt-1">Synthetic insurance data (policyholders, policies, claims, payments, coverages) loaded into BigQuery. Dataform manages 5 staging tables, 3 intermediate transforms, 6 dimension/fact tables, and 2 report views. 16 data quality assertions run on every deploy.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-blue-600 rounded px-1.5 py-0.5 mt-0.5">P02</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Orchestrated ELT Pipeline</span>
+                <p class="text-[13px] text-slate-500 mt-1">A Cloud Run container runs the full extract-load-transform cycle on a schedule. Cloud Run + Cloud Scheduler was chosen over Cloud Composer: same reliability at a fraction of the cost for a single-DAG workload.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-blue-600 rounded px-1.5 py-0.5 mt-0.5">P03</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Streaming Intake</span>
+                <p class="text-[13px] text-slate-500 mt-1">Pub/Sub topic receives claim events in real time. A Cloud Run subscriber validates, deduplicates, and writes to BigQuery. Demonstrates event-driven architecture alongside the batch ELT pattern.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-emerald-600 rounded px-1.5 py-0.5 mt-0.5">P04</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Infrastructure as Code</span>
+                <p class="text-[13px] text-slate-500 mt-1">Every GCP resource behind P01 to P03 is defined in Terraform: reusable modules for BigQuery, GCS, Pub/Sub, Cloud Run and IAM, with dev and prod separated by variable-driven naming. CI checks formatting on every pull request and authenticates to GCP through Workload Identity Federation, so there are no service account keys to leak anywhere in the pipeline. Plans and applies are still run by hand &mdash; listed as an open gap under <a href="#en-what-this-deliberately-does-not-do" class="underline hover:text-slate-700">What This Deliberately Does Not Do</a> rather than pretended otherwise.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-amber-600 rounded px-1.5 py-0.5 mt-0.5">P05</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Streaming Claims Pipeline</span>
+                <p class="text-[13px] text-slate-500 mt-1">A true streaming Apache Beam pipeline on Dataflow, where P03 runs Beam in batch. It windows on event time rather than arrival time, fires early results every 30 seconds and again when late events land, still accepts data up to an hour behind the watermark, and routes malformed events to a dead-letter topic with the reason attached.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-violet-600 rounded px-1.5 py-0.5 mt-0.5">P06</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Pricing ML Model</span>
+                <p class="text-[13px] text-slate-500 mt-1">A GLM (Generalized Linear Model) scores 144K policies with a predicted pure premium. Output lands in <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_pricing_ml.model_scoring</code> and feeds the Pricing Adequacy page of this dashboard.</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- 1. The intersection -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Four Disciplines, One Table</h3>
+<h3 id="en-four-disciplines-one-table" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Four Disciplines, One Table</h3>
 <p class="section-context mb-3">
     A claims table is where four jobs meet. In most insurers those jobs sit in different teams, and the
     handoffs between them are where the time and the disagreements go. Building all four sides is the
@@ -71,7 +182,7 @@
 </div>
 
 <!-- 2. Worked example -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">How a Question Becomes a Table</h3>
+<h3 id="en-how-a-question-becomes-a-table" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">How a Question Becomes a Table</h3>
 <p class="section-context mb-3">
     This is the actual path taken by the <a href="/loss-triangle" class="underline hover:text-slate-900">Loss Triangle</a>
     page, step by step. It is the shape every other page in this dashboard follows.
@@ -124,12 +235,39 @@
 </div>
 
 <!-- 3. Layering rule -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">The Layering Rule</h3>
+<h3 id="en-the-layering-rule" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">The Layering Rule</h3>
 <p class="section-context mb-3">
     Sixteen tables that Dataform builds, across five layers. The rule is that each layer is allowed to do one kind of work, so
     when a page needs a new column the question is <em>which layer does this belong to</em> rather than
     <em>which query do I edit</em>.
 </p>
+<div class="card p-5 mb-4 overflow-x-auto">
+    <svg viewBox="0 0 900 280" class="w-full min-w-[620px]" style="max-height:310px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 18 L22 258" stroke="#CBD5E1" stroke-width="1.5" marker-end="url(#layerflow)"/>
+        <rect x="44" y="8" width="856" height="42" rx="7" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="60" y="34" font-size="12.5" font-weight="700" fill="#334155">raw_</text>
+        <text x="194" y="34" font-size="10.5" fill="#334155" opacity="0.85">declared, never created — the load stays a separate, auditable step</text>
+        <text x="884" y="34" text-anchor="end" font-size="10" fill="#94A3B8">5 declarations</text>
+        <rect x="44" y="59" width="856" height="42" rx="7" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="60" y="85" font-size="12.5" font-weight="700" fill="#1E40AF">stg_</text>
+        <text x="194" y="85" font-size="10.5" fill="#1E40AF" opacity="0.85">rename, cast, trim — strictly one to one with the source</text>
+        <text x="884" y="85" text-anchor="end" font-size="10" fill="#60A5FA">5 tables</text>
+        <rect x="44" y="110" width="856" height="42" rx="7" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+        <text x="60" y="136" font-size="12.5" font-weight="700" fill="#5B21B6">int_</text>
+        <text x="194" y="136" font-size="10.5" fill="#5B21B6" opacity="0.85">joins and derivations more than one mart needs — not exposed</text>
+        <text x="884" y="136" text-anchor="end" font-size="10" fill="#A78BFA">3 tables</text>
+        <rect x="44" y="161" width="856" height="42" rx="7" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+        <text x="60" y="187" font-size="12.5" font-weight="700" fill="#065F46">dim_ / fct_</text>
+        <text x="194" y="187" font-size="10.5" fill="#065F46" opacity="0.85">the model — partitioned, clustered, and asserted on its keys</text>
+        <text x="884" y="187" text-anchor="end" font-size="10" fill="#34D399">6 tables</text>
+        <rect x="44" y="212" width="856" height="42" rx="7" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.2"/>
+        <text x="60" y="238" font-size="12.5" font-weight="700" fill="#9A3412">rpt_</text>
+        <text x="194" y="238" font-size="10.5" fill="#9A3412" opacity="0.85">shaped for one question and cheap to read</text>
+        <text x="884" y="238" text-anchor="end" font-size="10" fill="#FB923C">2 tables</text>
+        <text x="450" y="276" text-anchor="middle" font-size="9" fill="#94A3B8">Each layer does one kind of work. A new column belongs to exactly one of them.</text>
+        <defs><marker id="layerflow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#CBD5E1"/></marker></defs>
+    </svg>
+</div>
 <div class="card divide-y divide-slate-100 mb-6">
     <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
         <span class="text-[13px] font-semibold text-slate-800">raw_<span class="text-slate-400 font-normal">&nbsp;&middot; 5 declarations</span></span>
@@ -154,7 +292,7 @@
 </div>
 
 <!-- 4. Actuarial decisions -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Actuarial Decisions That Are Really Modelling Decisions</h3>
+<h3 id="en-actuarial-decisions-that-are-really-mo" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Actuarial Decisions That Are Really Modelling Decisions</h3>
 <p class="section-context mb-3">
     These four look like schema details in a code review. Each of them is an actuarial judgement that
     became permanent the moment it was written into a table.
@@ -179,7 +317,7 @@
 </div>
 
 <!-- 5. Governance -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">What Governance Means Here</h3>
+<h3 id="en-what-governance-means-here" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">What Governance Means Here</h3>
 <p class="section-context mb-3">
     Governance in a portfolio project usually means a paragraph promising it. These are the parts that
     actually run, and what each one is defending against.
@@ -197,7 +335,7 @@
 </div>
 
 <!-- 6. GCP choices -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">GCP Choices, and the Case for the Other One</h3>
+<h3 id="en-gcp-choices-and-the-case-for-the-other" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">GCP Choices, and the Case for the Other One</h3>
 <p class="section-context mb-3">
     A decision is only worth recording with the conditions that would reverse it. These are the four
     that shaped the platform.
@@ -239,10 +377,28 @@
         <p class="text-[13px] text-slate-500 leading-relaxed">Pure premium is modelled as a Tweedie GLM with variance power 1.5, which handles a target that is zero for most policies and continuous for the rest. The fitted coefficients matter as much as the predictions, because a rate has to be explainable to a regulator, not just accurate.</p>
         <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> the training set is too large to pull out of BigQuery, or the model family on offer is genuinely adequate and keeping everything in SQL is worth more than control over the fit.</p>
     </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">FastAPI + Jinja2</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">over</span>
+            <span class="text-[13px] text-slate-500">Streamlit</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Full control over the HTML, the CSS and the page weight, and no framework chrome announcing &ldquo;prototype&rdquo;. It is server-rendered, so every section is a real URL that search engines and analytics can see.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> the audience is internal and the value is entirely in the analysis. Streamlit gets a working data app in an afternoon; this took considerably longer, and that trade only pays when someone outside the team is looking.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">BigQuery + GCS</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">over</span>
+            <span class="text-[13px] text-slate-500">Postgres</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Columnar storage, partition pruning, and storage separated from compute &mdash; so the claims table can grow without the query plan changing shape.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> the workload is transactional: many small writes, row-level updates, constraints enforced by the database. A claims <em>system</em> is Postgres. A claims <em>warehouse</em> is not.</p>
+    </div>
 </div>
 
 <!-- 7. Limits -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">What This Deliberately Does Not Do</h3>
+<h3 id="en-what-this-deliberately-does-not-do" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">What This Deliberately Does Not Do</h3>
 <div class="card p-4 mb-2">
     <ul class="space-y-3.5 text-[13px] text-slate-600">
         <li><strong class="text-slate-800">The data is synthetic.</strong> Volumes and distributions are realistic enough to exercise the patterns, and no real policyholder data was used. Treat the numbers on these pages as a demonstration of method, not as a book of business.</li>
@@ -262,21 +418,131 @@
 <!-- ─── SPANISH ─────────────────────────────────── -->
 <div data-lang="es" class="hidden">
 
-<p class="section-context mb-2">
-    <a href="/how-its-built" class="underline hover:text-slate-900">Cómo Se Construyó</a> es el inventario:
-    los seis proyectos, los servicios, el diagrama. Esta página es el <strong>método</strong>: cómo una
-    pregunta actuarial se convierte en una tabla en la que otra persona puede confiar, y cuáles de las
-    decisiones del camino eran decisiones de ingeniería disfrazadas.
-</p>
-<p class="section-context mb-6">
-    Está escrita para servir dos veces: como evidencia de cómo trabajo, y como referencia para quien
-    esté construyendo algo parecido sobre Google Cloud con datos de seguros. Cada afirmación de abajo
-    apunta a un archivo en
-    <a href="https://github.com/GonorAndres/data-engineer-path" class="underline hover:text-slate-900" target="_blank" rel="noopener">el repositorio</a>.
-</p>
+<div class="card overflow-hidden mb-6">
+    <picture>
+        <source srcset="/static/img/hero-method.webp" type="image/webp">
+        <img src="/static/img/hero-method.jpg" width="1800" height="764"
+             alt="Vista cenital de un escritorio. Una tarjeta dice &quot;How much of 2021 is still unpaid?&quot;. Al lado, un triángulo de desarrollo de pérdidas trabajado a mano sobre papel cuadriculado, con los encabezados tachados y reescritos como cumulative y development, un lápiz mecánico y una regla de acero encima, y una gráfica impresa sujeta con chinchetas a la derecha."
+             class="w-full block h-[190px] sm:h-[240px] lg:h-[280px] object-cover object-center">
+    </picture>
+    <div class="p-5 md:p-6">
+        <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">La plataforma completa, y por qué tiene esta forma</h2>
+        <p class="section-context mb-3">La pregunta de esa tarjeta es real, y responderla bien no es una consulta. Es una decisión de grano, un contrato con los datos de origen, una transformación repartida en capas, una validación que falla de forma ruidosa cuando la aritmética deja de tener sentido, y al final una tabla que otra persona puede usar sin preguntarte qué significa. Esta página recorre ese camino completo.</p>
+        <p class="section-context">Debajo hay seis proyectos: un almacén de siniestros, un pipeline ELT orquestado, una ingesta en streaming, la infraestructura en Terraform, un job de streaming en Beam y un modelo de pricing. Todo sobre Google Cloud, todo construido aquí, todo versionado y desplegado por CI.</p>
+        <div class="mt-4 pt-4 border-t border-slate-100 grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">Si estás contratando:</strong> un actuario construyó cada capa de esto, y puede explicar por qué cada una tiene la forma que tiene. Los seis proyectos son el inventario; el ejemplo trabajado es el argumento.</p>
+            <p class="text-[13px] text-slate-500"><strong class="text-slate-700 font-semibold">Si estás construyendo algo parecido:</strong> cada afirmación apunta a un archivo que puedes abrir. La regla de capas y las decisiones de GCP son lo que se transfiere a tu propio stack.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card p-4 mb-6">
+    <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2.5">En Esta Página</span>
+    <ol class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-[13px]">
+        <li><a href="#es-la-plataforma-de-punta-a-punta" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> La Plataforma, de Punta a Punta</a></li>
+        <li><a href="#es-los-seis-proyectos" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">2.</span> Los Seis Proyectos</a></li>
+        <li><a href="#es-cuatro-disciplinas-una-tabla" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Cuatro Disciplinas, Una Tabla</a></li>
+        <li><a href="#es-como-una-pregunta-se-vuelve-una-tabla" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">4.</span> Cómo una Pregunta se Vuelve una Tabla</a></li>
+        <li><a href="#es-la-regla-de-las-capas" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">5.</span> La Regla de las Capas</a></li>
+        <li><a href="#es-decisiones-actuariales-que-en-realidad" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">6.</span> Decisiones Actuariales que en Realidad son de Modelado</a></li>
+        <li><a href="#es-que-significa-gobierno-de-datos-aqui" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">7.</span> Qué Significa Gobierno de Datos Aquí</a></li>
+        <li><a href="#es-decisiones-de-gcp-y-el-argumento-a-fav" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">8.</span> Decisiones de GCP, y el Argumento a Favor de la Otra Opción</a></li>
+        <li><a href="#es-lo-que-deliberadamente-no-hace" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">9.</span> Lo Que Deliberadamente No Hace</a></li>
+    </ol>
+</div>
+
+<h3 id="es-la-plataforma-de-punta-a-punta" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">La Plataforma, de Punta a Punta</h3>
+<div class="card p-5 mb-6 overflow-x-auto">
+    <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="30" width="110" height="56" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="55" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">CSV / Parquet</text>
+        <text x="55" y="72" text-anchor="middle" font-size="9" fill="#94A3B8">Datos fuente</text>
+        <rect x="158" y="30" width="110" height="56" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="213" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#1E40AF">BigQuery</text>
+        <text x="213" y="72" text-anchor="middle" font-size="9" fill="#60A5FA">Tablas crudas</text>
+        <rect x="316" y="30" width="110" height="56" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="371" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#1E40AF">Dataform</text>
+        <text x="371" y="72" text-anchor="middle" font-size="9" fill="#60A5FA">stg / int / marts</text>
+        <rect x="474" y="30" width="110" height="56" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+        <text x="529" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#065F46">Calidad</text>
+        <text x="529" y="72" text-anchor="middle" font-size="9" fill="#34D399">Assertions</text>
+        <rect x="632" y="30" width="110" height="56" rx="8" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.2"/>
+        <text x="687" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#9A3412">FastAPI</text>
+        <text x="687" y="72" text-anchor="middle" font-size="9" fill="#FB923C">Este dashboard</text>
+        <rect x="790" y="30" width="110" height="56" rx="8" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+        <text x="845" y="54" text-anchor="middle" font-size="11" font-weight="600" fill="#5B21B6">Cloud Run</text>
+        <text x="845" y="72" text-anchor="middle" font-size="9" fill="#A78BFA">URL pública</text>
+        <path d="M112 58 L156 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-es)"/>
+        <path d="M270 58 L314 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-es)"/>
+        <path d="M428 58 L472 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-es)"/>
+        <path d="M586 58 L630 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-es)"/>
+        <path d="M744 58 L788 58" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#arrow-es)"/>
+        <rect x="158" y="100" width="584" height="18" rx="4" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+        <text x="450" y="113" text-anchor="middle" font-size="9" fill="#94A3B8">GitHub Actions CI/CD: lint, test, build y deploy automático en cada push a main</text>
+        <defs><marker id="arrow-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
+    </svg>
+</div>
+
+<h3 id="es-los-seis-proyectos" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Los Seis Proyectos</h3>
+<div class="space-y-3 mb-6">
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-blue-600 rounded px-1.5 py-0.5 mt-0.5">P01</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Almacén de Datos de Siniestros</span>
+                <p class="text-[13px] text-slate-500 mt-1">Datos sintéticos de seguros (asegurados, pólizas, siniestros, pagos, coberturas) cargados en BigQuery. Dataform gestiona 5 tablas de staging, 3 transformaciones intermedias, 6 tablas dimensionales y de hechos, y 2 vistas de reportes. 16 validaciones de calidad corren en cada despliegue.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-blue-600 rounded px-1.5 py-0.5 mt-0.5">P02</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Pipeline ELT Orquestado</span>
+                <p class="text-[13px] text-slate-500 mt-1">Un contenedor en Cloud Run ejecuta el ciclo completo de extracción, carga y transformación de forma programada. Se eligió Cloud Run + Cloud Scheduler en lugar de Cloud Composer: misma confiabilidad a una fracción del costo para una carga de trabajo de un solo DAG.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-blue-600 rounded px-1.5 py-0.5 mt-0.5">P03</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Ingesta en Tiempo Real</span>
+                <p class="text-[13px] text-slate-500 mt-1">Un tópico de Pub/Sub recibe eventos de siniestros en tiempo real. Un suscriptor en Cloud Run valida, deduplica y escribe a BigQuery. Demuestra arquitectura orientada a eventos junto con el patrón batch del ELT.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-emerald-600 rounded px-1.5 py-0.5 mt-0.5">P04</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Infraestructura como Código</span>
+                <p class="text-[13px] text-slate-500 mt-1">Cada recurso de GCP detrás de P01 a P03 está definido en Terraform: módulos reutilizables para BigQuery, GCS, Pub/Sub, Cloud Run e IAM, con dev y prod separados por nombres derivados de variables. CI valida el formato en cada pull request y se autentica con GCP mediante Workload Identity Federation, así que no hay llaves de cuenta de servicio que se puedan filtrar en ningún punto del pipeline. Los planes y los applies todavía se corren a mano &mdash; declarado como pendiente abierto en <a href="#es-lo-que-deliberadamente-no-hace" class="underline hover:text-slate-700">Lo Que Deliberadamente No Hace</a>, en vez de aparentar lo contrario.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-amber-600 rounded px-1.5 py-0.5 mt-0.5">P05</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Pipeline de Siniestros en Streaming</span>
+                <p class="text-[13px] text-slate-500 mt-1">Un pipeline de Apache Beam en streaming real sobre Dataflow, mientras que P03 corre Beam en modo batch. Ventanea por tiempo de evento y no por tiempo de llegada, emite resultados anticipados cada 30 segundos y otra vez cuando llegan eventos tardíos, acepta datos hasta una hora detrás del watermark, y manda los eventos malformados a un tópico de dead-letter con el motivo adjunto.</p>
+            </div>
+        </div>
+    </div>
+    <div class="card p-4">
+        <div class="flex items-start gap-3">
+            <span class="text-xs font-bold text-white bg-violet-600 rounded px-1.5 py-0.5 mt-0.5">P06</span>
+            <div>
+                <span class="font-semibold text-slate-800 text-[14px]">Modelo de Pricing con ML</span>
+                <p class="text-[13px] text-slate-500 mt-1">Un GLM (Modelo Lineal Generalizado) califica 144 mil pólizas con una prima pura estimada. La salida aterriza en <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_pricing_ml.model_scoring</code> y alimenta la página de Adecuación de Precios de este dashboard.</p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- 1. La intersección -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Cuatro Disciplinas, Una Tabla</h3>
+<h3 id="es-cuatro-disciplinas-una-tabla" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Cuatro Disciplinas, Una Tabla</h3>
 <p class="section-context mb-3">
     Una tabla de siniestros es donde se encuentran cuatro oficios. En la mayoría de las aseguradoras esos
     oficios viven en equipos distintos, y los traspasos entre ellos son donde se va el tiempo y donde
@@ -324,7 +590,7 @@
 </div>
 
 <!-- 2. Ejemplo trabajado -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Cómo una Pregunta se Vuelve una Tabla</h3>
+<h3 id="es-como-una-pregunta-se-vuelve-una-tabla" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Cómo una Pregunta se Vuelve una Tabla</h3>
 <p class="section-context mb-3">
     Este es el camino que siguió de verdad la página del
     <a href="/loss-triangle" class="underline hover:text-slate-900">Triángulo de Pérdidas</a>, paso a paso.
@@ -378,12 +644,39 @@
 </div>
 
 <!-- 3. Regla de capas -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">La Regla de las Capas</h3>
+<h3 id="es-la-regla-de-las-capas" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">La Regla de las Capas</h3>
 <p class="section-context mb-3">
     Dieciséis tablas que Dataform construye, repartidas en cinco capas. La regla es que cada capa puede hacer un solo tipo de
     trabajo, de modo que cuando una página necesita una columna nueva la pregunta sea
     <em>a qué capa pertenece esto</em> y no <em>qué consulta edito</em>.
 </p>
+<div class="card p-5 mb-4 overflow-x-auto">
+    <svg viewBox="0 0 900 280" class="w-full min-w-[620px]" style="max-height:310px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22 18 L22 258" stroke="#CBD5E1" stroke-width="1.5" marker-end="url(#layerflow-es)"/>
+        <rect x="44" y="8" width="856" height="42" rx="7" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
+        <text x="60" y="34" font-size="12.5" font-weight="700" fill="#334155">raw_</text>
+        <text x="194" y="34" font-size="10.5" fill="#334155" opacity="0.85">declaradas, nunca creadas — la carga es un paso aparte y auditable</text>
+        <text x="884" y="34" text-anchor="end" font-size="10" fill="#94A3B8">5 declaraciones</text>
+        <rect x="44" y="59" width="856" height="42" rx="7" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="60" y="85" font-size="12.5" font-weight="700" fill="#1E40AF">stg_</text>
+        <text x="194" y="85" font-size="10.5" fill="#1E40AF" opacity="0.85">renombrar, castear, limpiar — uno a uno con la fuente</text>
+        <text x="884" y="85" text-anchor="end" font-size="10" fill="#60A5FA">5 tablas</text>
+        <rect x="44" y="110" width="856" height="42" rx="7" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+        <text x="60" y="136" font-size="12.5" font-weight="700" fill="#5B21B6">int_</text>
+        <text x="194" y="136" font-size="10.5" fill="#5B21B6" opacity="0.85">joins y derivaciones que más de un mart necesita — no se exponen</text>
+        <text x="884" y="136" text-anchor="end" font-size="10" fill="#A78BFA">3 tablas</text>
+        <rect x="44" y="161" width="856" height="42" rx="7" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+        <text x="60" y="187" font-size="12.5" font-weight="700" fill="#065F46">dim_ / fct_</text>
+        <text x="194" y="187" font-size="10.5" fill="#065F46" opacity="0.85">el modelo — particionado, agrupado y validado en sus llaves</text>
+        <text x="884" y="187" text-anchor="end" font-size="10" fill="#34D399">6 tablas</text>
+        <rect x="44" y="212" width="856" height="42" rx="7" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.2"/>
+        <text x="60" y="238" font-size="12.5" font-weight="700" fill="#9A3412">rpt_</text>
+        <text x="194" y="238" font-size="10.5" fill="#9A3412" opacity="0.85">con la forma de una pregunta y barata de leer</text>
+        <text x="884" y="238" text-anchor="end" font-size="10" fill="#FB923C">2 tablas</text>
+        <text x="450" y="276" text-anchor="middle" font-size="9" fill="#94A3B8">Cada capa hace un solo tipo de trabajo. Una columna nueva pertenece a exactamente una de ellas.</text>
+        <defs><marker id="layerflow-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#CBD5E1"/></marker></defs>
+    </svg>
+</div>
 <div class="card divide-y divide-slate-100 mb-6">
     <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
         <span class="text-[13px] font-semibold text-slate-800">raw_<span class="text-slate-400 font-normal">&nbsp;&middot; 5 declaraciones</span></span>
@@ -408,7 +701,7 @@
 </div>
 
 <!-- 4. Decisiones actuariales -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Decisiones Actuariales que en Realidad son de Modelado</h3>
+<h3 id="es-decisiones-actuariales-que-en-realidad" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Decisiones Actuariales que en Realidad son de Modelado</h3>
 <p class="section-context mb-3">
     Las cuatro parecen detalles de esquema en una revisión de código. Cada una es un juicio actuarial que
     quedó permanente en el momento en que se escribió dentro de una tabla.
@@ -433,7 +726,7 @@
 </div>
 
 <!-- 5. Gobierno -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Qué Significa Gobierno de Datos Aquí</h3>
+<h3 id="es-que-significa-gobierno-de-datos-aqui" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Qué Significa Gobierno de Datos Aquí</h3>
 <p class="section-context mb-3">
     En un proyecto de portafolio, gobierno de datos suele significar un párrafo prometiéndolo. Estas son
     las piezas que realmente corren, y contra qué protege cada una.
@@ -451,7 +744,7 @@
 </div>
 
 <!-- 6. Decisiones GCP -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Decisiones de GCP, y el Argumento a Favor de la Otra Opción</h3>
+<h3 id="es-decisiones-de-gcp-y-el-argumento-a-fav" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Decisiones de GCP, y el Argumento a Favor de la Otra Opción</h3>
 <p class="section-context mb-3">
     Una decisión solo vale la pena documentarla junto con las condiciones que la revertirían. Estas son
     las cuatro que le dieron forma a la plataforma.
@@ -493,10 +786,28 @@
         <p class="text-[13px] text-slate-500 leading-relaxed">La prima pura se modela con un GLM Tweedie de potencia de varianza 1.5, que maneja un objetivo que vale cero para la mayoría de las pólizas y es continuo para el resto. Los coeficientes ajustados importan tanto como las predicciones, porque una tarifa tiene que poder explicarse ante un regulador, no solo ser precisa.</p>
         <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> el conjunto de entrenamiento es demasiado grande para sacarlo de BigQuery, o la familia de modelos disponible alcanza de sobra y quedarse en SQL vale más que el control sobre el ajuste.</p>
     </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">FastAPI + Jinja2</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">en vez de</span>
+            <span class="text-[13px] text-slate-500">Streamlit</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Control total sobre el HTML, el CSS y el peso de la página, sin la estética de framework que grita &laquo;prototipo&raquo;. Se renderiza en el servidor, así que cada sección es una URL real que buscadores y analítica pueden ver.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> la audiencia es interna y todo el valor está en el análisis. Streamlit te da una app de datos funcionando en una tarde; esto tomó bastante más, y ese intercambio solo se paga cuando alguien de fuera del equipo está mirando.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">BigQuery + GCS</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">en vez de</span>
+            <span class="text-[13px] text-slate-500">Postgres</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Almacenamiento columnar, poda de particiones y cómputo separado del almacenamiento, para que la tabla de siniestros pueda crecer sin que cambie la forma del plan de ejecución.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> la carga es transaccional: muchas escrituras pequeñas, actualizaciones a nivel de renglón, restricciones que impone la base. Un <em>sistema</em> de siniestros es Postgres. Un <em>almacén</em> de siniestros no.</p>
+    </div>
 </div>
 
 <!-- 7. Límites -->
-<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Lo Que Deliberadamente No Hace</h3>
+<h3 id="es-lo-que-deliberadamente-no-hace" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Lo Que Deliberadamente No Hace</h3>
 <div class="card p-4 mb-2">
     <ul class="space-y-3.5 text-[13px] text-slate-600">
         <li><strong class="text-slate-800">Los datos son sintéticos.</strong> Los volúmenes y las distribuciones son lo bastante realistas para ejercitar los patrones, y no se usó información de ningún asegurado real. Los números de estas páginas son una demostración de método, no una cartera.</li>

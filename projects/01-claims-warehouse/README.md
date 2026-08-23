@@ -161,8 +161,8 @@ Every number on these pages comes from a live query against `dev_claims_analytic
 | **Overview** -- 608 claims, $26.9M paid, $44.3K average severity | **Loss Development Triangle** -- cumulative paid by accident year, with the blank corner as IBNR |
 | ![Portfolio health](docs/screenshots/portfolio-health.png) | ![Pricing adequacy](docs/screenshots/pricing-adequacy.png) |
 | **Portfolio Health** -- frequency, pure premium and loss ratio by coverage | **Pricing Adequacy** -- P06's GLM output scoring predicted vs charged premium |
-| ![Geographic risk](docs/screenshots/geographic-risk.png) | ![How it's built](docs/screenshots/how-its-built.png) |
-| **Geographic Risk** -- claim concentration across Mexico's 32 states | **How It's Built** -- the platform explaining its own pipeline, EN and ES |
+| ![Geographic risk](docs/screenshots/geographic-risk.png) | ![Methodology](docs/screenshots/methodology.png) |
+| **Geographic Risk** -- claim concentration across Mexico's 32 states | **Methodology** -- the platform explaining its own decisions, EN and ES |
 
 CI on the commit that deployed it:
 
