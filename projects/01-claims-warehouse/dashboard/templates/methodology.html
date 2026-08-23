@@ -19,28 +19,28 @@
     </picture>
     <div class="p-5 md:p-6">
         <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">How this platform got its shape</h2>
-        <p class="section-context mb-3">That question on the card is one I actually had to answer, and it turned out not to be a query. First it was a decision about what a single row should represent &mdash; a claim, or a payment against one, which are not the same thing and give different reserves. Then a promise about what the source data would always look like. Then a transformation split across layers so that no step did two jobs at once, with a check in the middle that fails loudly when the arithmetic stops making sense. Only at the very end is there a table, and the point of everything before it is that somebody else can use that table without asking me what it means.</p>
-        <p class="section-context mb-3">Underneath it sit six projects: a claims warehouse, an orchestrated ELT pipeline, a streaming intake, the infrastructure written as Terraform, a Beam streaming job, and a pricing model. All on Google Cloud, all built here, all shipped by CI.</p>
-        <p class="section-context">I trained as an actuary, which mostly means I knew what the numbers were supposed to mean before I had to decide where they would live. That is what this page is really about. Everything in it points at a file you can open, and wherever I picked one tool over another I have tried to say what would make me pick the other one instead.</p>
+        <p class="section-context mb-3">Insurance claims are not paid all at once. One opened in 2021 is still being paid out in 2024, so if you want to know how much of that year is still owed, there is nowhere to look it up. Somebody has to build the answer. That is the question written on the card above, and building answers like it is what everything here exists to do.</p>
+        <p class="section-context mb-3">Six pieces sit underneath. One keeps the claims and reshapes them into tables people can actually ask questions of. One runs that reshaping on a schedule, unattended. One takes claims in as they happen instead of waiting for the nightly run. One writes down every server and database as a file, so the whole thing can be rebuilt from that file rather than from memory. One handles a continuous stream of incoming events, including the ones that turn up late. And one estimates what a policy ought to cost, given who is buying it.</p>
+        <p class="section-context">I trained as an actuary, so I knew what these numbers were supposed to mean before I had to decide where they would live. That is most of what this page is about. Every claim in it points at a file you can open, and wherever I chose one tool over another I have tried to say what would make me choose differently.</p>
     </div>
 </div>
 
 <div class="card p-4 mb-6">
     <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2.5">On This Page</span>
     <ol class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-[13px]">
-        <li><a href="#en-from-csv-to-dashboard" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> From CSV to Dashboard</a></li>
+        <li><a href="#en-how-the-data-travels" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> How the Data Travels</a></li>
         <li><a href="#en-the-six-projects" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">2.</span> The Six Projects</a></li>
         <li><a href="#en-where-four-jobs-meet" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Where Four Jobs Meet</a></li>
         <li><a href="#en-how-a-question-becomes-a-table" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">4.</span> How a Question Becomes a Table</a></li>
         <li><a href="#en-the-layering-rule" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">5.</span> The Layering Rule</a></li>
         <li><a href="#en-actuarial-decisions-that-are-really-mo" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">6.</span> Actuarial Decisions That Are Really Modelling Decisions</a></li>
         <li><a href="#en-what-governance-means-here" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">7.</span> What Governance Means Here</a></li>
-        <li><a href="#en-gcp-choices-and-the-case-for-the-other" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">8.</span> GCP Choices, and the Case for the Other One</a></li>
+        <li><a href="#en-google-cloud-choices-and-the-case-for-" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">8.</span> Google Cloud Choices, and the Case for the Other One</a></li>
         <li><a href="#en-what-this-deliberately-does-not-do" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">9.</span> What This Deliberately Does Not Do</a></li>
     </ol>
 </div>
 
-<h3 id="en-from-csv-to-dashboard" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">From CSV to Dashboard</h3>
+<h3 id="en-how-the-data-travels" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">How the Data Travels</h3>
 <div class="card p-5 mb-6 overflow-x-auto">
     <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="0" y="30" width="110" height="56" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
@@ -332,7 +332,7 @@
 </div>
 
 <!-- 6. GCP choices -->
-<h3 id="en-gcp-choices-and-the-case-for-the-other" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">GCP Choices, and the Case for the Other One</h3>
+<h3 id="en-google-cloud-choices-and-the-case-for-" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Google Cloud Choices, and the Case for the Other One</h3>
 <p class="section-context mb-3">
     A decision is only worth recording with the conditions that would reverse it. These are the four
     that shaped the platform.
@@ -424,28 +424,28 @@
     </picture>
     <div class="p-5 md:p-6">
         <h2 class="text-[19px] md:text-[21px] font-semibold text-slate-900 tracking-tight mb-3">Cómo esta plataforma tomó su forma</h2>
-        <p class="section-context mb-3">Esa pregunta de la tarjeta la tuve que responder de verdad, y resultó no ser una consulta. Primero fue decidir qué representa un renglón: un siniestro, o un pago contra un siniestro, que no es lo mismo y da reservas distintas. Después, una promesa sobre cómo se iba a ver siempre la fuente. Después, una transformación partida en capas para que ningún paso hiciera dos trabajos a la vez, con una validación en medio que truena fuerte cuando la aritmética deja de cuadrar. Hasta el final aparece una tabla, y el sentido de todo lo anterior es que alguien más pueda usarla sin preguntarme qué significa.</p>
-        <p class="section-context mb-3">Debajo hay seis proyectos: un almacén de siniestros, un pipeline ELT orquestado, una ingesta en streaming, la infraestructura escrita en Terraform, un job de streaming en Beam y un modelo de pricing. Todo sobre Google Cloud, todo construido aquí, todo desplegado por CI.</p>
-        <p class="section-context">Estudié actuaría, que en la práctica quiere decir que sabía qué debían significar los números antes de tener que decidir dónde iban a vivir. De eso trata realmente esta página. Todo lo que hay en ella apunta a un archivo que puedes abrir, y donde elegí una herramienta sobre otra intenté decir qué me haría elegir la contraria.</p>
+        <p class="section-context mb-3">Los siniestros no se pagan de una sola vez. Uno abierto en 2021 se sigue pagando en 2024, así que si quieres saber cuánto de ese año todavía se debe, no hay dónde consultarlo. Alguien tiene que construir la respuesta. Esa es la pregunta escrita en la tarjeta de arriba, y construir respuestas como esa es para lo que existe todo esto.</p>
+        <p class="section-context mb-3">Debajo hay seis piezas. Una guarda los siniestros y los reacomoda en tablas a las que la gente pueda hacerles preguntas. Otra ejecuta ese reacomodo en un horario fijo, sin que nadie la vigile. Otra recibe los siniestros conforme ocurren, en lugar de esperar al proceso de la noche. Otra deja escrito en un archivo cada servidor y cada base de datos, para que todo se pueda reconstruir desde ahí y no desde la memoria de alguien. Otra procesa un flujo continuo de eventos, incluidos los que llegan tarde. Y la última estima cuánto debería costar una póliza según quién la está comprando.</p>
+        <p class="section-context">Estudié actuaría, así que sabía qué debían significar estos números antes de tener que decidir dónde iban a vivir. De eso trata casi toda esta página. Cada afirmación apunta a un archivo que puedes abrir, y donde elegí una herramienta sobre otra intenté decir qué me haría elegir distinto.</p>
     </div>
 </div>
 
 <div class="card p-4 mb-6">
     <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2.5">En Esta Página</span>
     <ol class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 text-[13px]">
-        <li><a href="#es-del-csv-al-dashboard" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> Del CSV al Dashboard</a></li>
+        <li><a href="#es-como-viajan-los-datos" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">1.</span> Cómo Viajan los Datos</a></li>
         <li><a href="#es-los-seis-proyectos" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">2.</span> Los Seis Proyectos</a></li>
         <li><a href="#es-donde-se-encuentran-cuatro-oficios" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">3.</span> Dónde se Encuentran Cuatro Oficios</a></li>
         <li><a href="#es-como-una-pregunta-se-vuelve-una-tabla" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">4.</span> Cómo una Pregunta se Vuelve una Tabla</a></li>
         <li><a href="#es-la-regla-de-las-capas" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">5.</span> La Regla de las Capas</a></li>
         <li><a href="#es-decisiones-actuariales-que-en-realidad" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">6.</span> Decisiones Actuariales que en Realidad son de Modelado</a></li>
         <li><a href="#es-que-significa-gobierno-de-datos-aqui" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">7.</span> Qué Significa Gobierno de Datos Aquí</a></li>
-        <li><a href="#es-decisiones-de-gcp-y-el-argumento-a-fav" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">8.</span> Decisiones de GCP, y el Argumento a Favor de la Otra Opción</a></li>
+        <li><a href="#es-decisiones-de-google-cloud-y-el-argume" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">8.</span> Decisiones de Google Cloud, y el Argumento a Favor de la Otra Opción</a></li>
         <li><a href="#es-lo-que-deliberadamente-no-hace" class="text-slate-600 hover:text-slate-900 hover:underline"><span class="text-slate-400 tabular-nums">9.</span> Lo Que Deliberadamente No Hace</a></li>
     </ol>
 </div>
 
-<h3 id="es-del-csv-al-dashboard" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Del CSV al Dashboard</h3>
+<h3 id="es-como-viajan-los-datos" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Cómo Viajan los Datos</h3>
 <div class="card p-5 mb-6 overflow-x-auto">
     <svg viewBox="0 0 900 120" class="w-full min-w-[700px]" style="max-height:130px;" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="0" y="30" width="110" height="56" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.2"/>
@@ -738,7 +738,7 @@
 </div>
 
 <!-- 6. Decisiones GCP -->
-<h3 id="es-decisiones-de-gcp-y-el-argumento-a-fav" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Decisiones de GCP, y el Argumento a Favor de la Otra Opción</h3>
+<h3 id="es-decisiones-de-google-cloud-y-el-argume" class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3 scroll-mt-20">Decisiones de Google Cloud, y el Argumento a Favor de la Otra Opción</h3>
 <p class="section-context mb-3">
     Una decisión solo vale la pena documentarla junto con las condiciones que la revertirían. Estas son
     las cuatro que le dieron forma a la plataforma.
