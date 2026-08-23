@@ -1,0 +1,516 @@
+{% extends "base.html" %}
+
+{% block title %}Methodology -- Claims Analytics{% endblock %}
+{% block page_title %}
+<span data-lang="en">Methodology</span>
+<span data-lang="es" class="hidden">Metodología</span>
+{% endblock %}
+
+{% block content %}
+<!-- ─── ENGLISH ─────────────────────────────────── -->
+<div data-lang="en">
+
+<p class="section-context mb-2">
+    <a href="/how-its-built" class="underline hover:text-slate-900">How It's Built</a> is the inventory:
+    the six projects, the services, the diagram. This page is the <strong>method</strong> &mdash; how an
+    actuarial question turns into a table somebody else can trust, and which decisions along the way
+    were engineering decisions in disguise.
+</p>
+<p class="section-context mb-6">
+    It is written to be useful twice: as evidence of how I work, and as a reference for anyone building
+    something similar on Google Cloud with insurance data. Every claim below points at a file in
+    <a href="https://github.com/GonorAndres/data-engineer-path" class="underline hover:text-slate-900" target="_blank" rel="noopener">the repository</a>.
+</p>
+
+<!-- 1. The intersection -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Four Disciplines, One Table</h3>
+<p class="section-context mb-3">
+    A claims table is where four jobs meet. In most insurers those jobs sit in different teams, and the
+    handoffs between them are where the time and the disagreements go. Building all four sides is the
+    point of this platform.
+</p>
+<div class="card p-5 mb-6 overflow-x-auto">
+    <svg viewBox="0 0 900 236" class="w-full min-w-[720px]" style="max-height:250px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="200" height="70" rx="8" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+        <text x="100" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#5B21B6">Actuarial Science</text>
+        <text x="100" y="45" text-anchor="middle" font-size="10" fill="#8B5CF6">What the number</text>
+        <text x="100" y="59" text-anchor="middle" font-size="10" fill="#8B5CF6">has to mean</text>
+
+        <rect x="233" y="0" width="200" height="70" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="333" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#1E40AF">Analytics</text>
+        <text x="333" y="45" text-anchor="middle" font-size="10" fill="#60A5FA">What is actually</text>
+        <text x="333" y="59" text-anchor="middle" font-size="10" fill="#60A5FA">being asked</text>
+
+        <rect x="466" y="0" width="200" height="70" rx="8" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.2"/>
+        <text x="566" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#9A3412">Data Engineering</text>
+        <text x="566" y="45" text-anchor="middle" font-size="10" fill="#FB923C">How it is computed,</text>
+        <text x="566" y="59" text-anchor="middle" font-size="10" fill="#FB923C">the same way every time</text>
+
+        <rect x="699" y="0" width="200" height="70" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+        <text x="799" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#065F46">Data Governance</text>
+        <text x="799" y="45" text-anchor="middle" font-size="10" fill="#34D399">Why you can still</text>
+        <text x="799" y="59" text-anchor="middle" font-size="10" fill="#34D399">trust it in a year</text>
+
+        <path d="M100 72 L100 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge)"/>
+        <path d="M333 72 L333 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge)"/>
+        <path d="M566 72 L566 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge)"/>
+        <path d="M799 72 L799 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge)"/>
+
+        <rect x="90" y="104" width="720" height="52" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.4"/>
+        <text x="450" y="127" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">One modelled table</text>
+        <text x="450" y="145" text-anchor="middle" font-size="10" fill="#64748B">fct_claims &middot; fct_claim_payments &middot; rpt_loss_triangle</text>
+
+        <path d="M450 158 L450 182" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge)"/>
+
+        <rect x="285" y="188" width="330" height="46" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2"/>
+        <text x="450" y="208" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">A decision somebody can defend</text>
+        <text x="450" y="224" text-anchor="middle" font-size="9" fill="#94A3B8">reserve &middot; rate &middot; reinsurance &middot; capital</text>
+
+        <defs><marker id="converge" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
+    </svg>
+</div>
+
+<!-- 2. Worked example -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">How a Question Becomes a Table</h3>
+<p class="section-context mb-3">
+    This is the actual path taken by the <a href="/loss-triangle" class="underline hover:text-slate-900">Loss Triangle</a>
+    page, step by step. It is the shape every other page in this dashboard follows.
+</p>
+<div class="card p-5 mb-6">
+    <ol class="space-y-4">
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">1</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Start from the actuarial question, not the data</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed">&ldquo;How much of the 2021 accident year is still unpaid?&rdquo; That is a reserving question, and answering it needs cumulative paid amounts arranged by accident year against development year. Nothing about the source files suggests that shape; it comes from the question.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">2</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Decide the grain &mdash; this is the decision that matters</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed">A claim is not paid once. It pays out repeatedly over years, which is the entire reason triangles exist. So the base fact is <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">fct_claim_payments</code>, one row per payment, and <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">development_year</code> is derived at that grain from accident date to payment date. Choosing claim grain here would not produce a slow query. It would produce a wrong reserve, quietly.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">3</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Pin the source contract before transforming</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">stg_claim_payments</code> declares <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">payment_id</code> unique and four columns non-null. A single duplicated payment does not fail anything downstream &mdash; it inflates one cell of the triangle and every development factor derived from it. The assertion is cheaper than the investigation.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">4</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Transform in layers, one job each</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">int_claim_payments_cumulative</code> accumulates with a window function partitioned by accident year and ordered by development year. <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">rpt_loss_triangle</code> only pivots that into columns. Splitting them means the accumulation logic exists once, and the pivot can change without anyone re-deriving the maths.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">5</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Assert the thing that would be invisible if wrong</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">assert_payment_dates</code> requires that no payment precedes its accident date. A negative development year is not a curiosity: it shifts money into a cell that should not exist, and the triangle still renders perfectly. The assertions worth writing are the ones whose failure looks like a valid answer.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">6</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Serve a table, not a query</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed">The dashboard reads <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">rpt_loss_triangle</code> with a <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">SELECT *</code> and computes chain-ladder factors in the page. No business logic lives in the presentation layer, so the number on screen and the number in a notebook come from the same place.</p>
+            </div>
+        </li>
+    </ol>
+</div>
+
+<!-- 3. Layering rule -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">The Layering Rule</h3>
+<p class="section-context mb-3">
+    Sixteen tables that Dataform builds, across five layers. The rule is that each layer is allowed to do one kind of work, so
+    when a page needs a new column the question is <em>which layer does this belong to</em> rather than
+    <em>which query do I edit</em>.
+</p>
+<div class="card divide-y divide-slate-100 mb-6">
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">raw_<span class="text-slate-400 font-normal">&nbsp;&middot; 5 declarations</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Declared, never created. Dataform reads these tables and is not allowed to write them, which keeps loading the data a separate and auditable step from transforming it. It is also the single most common way to break a first rebuild &mdash; run the workflow against an empty raw layer and it fails at the first staging model.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">stg_<span class="text-slate-400 font-normal">&nbsp;&middot; 5 tables</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Rename, cast, trim. Strictly one-to-one with the source, no joins and no business logic, so a change in the source has exactly one place to land. This is where the uniqueness and non-null contracts are declared.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">int_<span class="text-slate-400 font-normal">&nbsp;&middot; 3 tables</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Joins and derivations that more than one mart needs: enriched claims, cumulative payments, policy exposure. Not exposed to any consumer, which is what makes them safe to restructure.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">dim_ / fct_<span class="text-slate-400 font-normal">&nbsp;&middot; 6 tables</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">The model itself, and the only layer anyone should join against. <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">fct_claims</code> is partitioned by <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">accident_date</code> and clustered on <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">coverage_type, claim_status</code> &mdash; the two cuts every actuarial question starts from.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">rpt_<span class="text-slate-400 font-normal">&nbsp;&middot; 2 tables</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Shaped for one question and cheap to read, because a dashboard page that runs a six-join query is a dashboard page that eventually times out in front of somebody.</p>
+    </div>
+</div>
+
+<!-- 4. Actuarial decisions -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Actuarial Decisions That Are Really Modelling Decisions</h3>
+<p class="section-context mb-3">
+    These four look like schema details in a code review. Each of them is an actuarial judgement that
+    became permanent the moment it was written into a table.
+</p>
+<div class="card divide-y divide-slate-100 mb-6">
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Partition on accident date, not report date</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Both dates are in the table; only one is the partition key. Every reserving and pricing cut is by accident year, so partitioning there makes the common query prune to a fraction of the table for free. Report date is the operational view &mdash; useful for claims handling, wrong as the physical layout of an analytical fact.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Derive development year once</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">It is computed at payment grain in the warehouse and never recomputed downstream. The alternative &mdash; every analyst deriving it in their own query &mdash; is exactly how two people produce two reserves from one database and spend a week finding out why.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Keep indemnity and expense apart</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">fct_claims</code> carries <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">total_indemnity</code> and <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">total_expense</code> as separate sums. Allocated expense is not loss. Rolling them into one column overstates severity, distorts the development pattern, and cannot be undone later without going back to payment grain.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Exposure is an offset, not a feature</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">The frequency model is a Poisson GLM with a log link and exposure entering as an offset, so a policy in force three months is not compared directly against one in force twelve. Passing exposure as an ordinary covariate lets the model estimate a coefficient for something the arithmetic already fixes at one.</p>
+    </div>
+</div>
+
+<!-- 5. Governance -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">What Governance Means Here</h3>
+<p class="section-context mb-3">
+    Governance in a portfolio project usually means a paragraph promising it. These are the parts that
+    actually run, and what each one is defending against.
+</p>
+<div class="card p-4 mb-6">
+    <ul class="space-y-3.5 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Assertions are contracts, not tests</strong> &mdash; they execute inside the same Dataform workflow that builds the tables, so a violated assumption stops its dependents instead of being discovered in a report. Three dedicated assertion models plus uniqueness and non-null declarations on staging and marts.</li>
+        <li><strong class="text-slate-800">One service account, six named roles</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.dataEditor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.jobUser</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">storage.objectAdmin</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">pubsub.editor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">run.invoker</code>, and <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">iam.serviceAccountTokenCreator</code>, which Dataform needs in order to execute a workflow as that account. No Owner, no Editor, nothing granted because it was faster.</li>
+        <li><strong class="text-slate-800">No service account keys exist</strong> &mdash; CI authenticates through Workload Identity Federation, bound to this specific GitHub repository. There is no credential file to leak, rotate, or accidentally commit.</li>
+        <li><strong class="text-slate-800">Cost is bounded structurally</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">max_bytes_billed</code> caps any Dataform query at 10&nbsp;GiB, so a bad join fails instead of billing. Partitioning and clustering do the rest, and the dashboard caches query results for five minutes rather than re-scanning per visitor.</li>
+        <li><strong class="text-slate-800">Environments separate by prefix, from one variable</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_claims_*</code> against <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">claims_*</code>, resolved in each model's config. Promotion is a variable change, not a second copy of the SQL.</li>
+        <li><strong class="text-slate-800">Deploys are canaries</strong> &mdash; each revision ships with no traffic and a tag, gets smoke-tested on its own URL for content rather than a 200, and only then takes traffic. A failed check leaves the previous revision serving, so there is nothing to roll back.</li>
+        <li><strong class="text-slate-800">The health check closes its own issue</strong> &mdash; a daily job asserts the site is up, BigQuery is connected, and the old URLs still redirect. Failure opens a GitHub issue; the next green run closes it. An open issue therefore means broken now, not broken once.</li>
+    </ul>
+</div>
+
+<!-- 6. GCP choices -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">GCP Choices, and the Case for the Other One</h3>
+<p class="section-context mb-3">
+    A decision is only worth recording with the conditions that would reverse it. These are the four
+    that shaped the platform.
+</p>
+<div class="card divide-y divide-slate-100 mb-6">
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">Dataform</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">over</span>
+            <span class="text-[13px] text-slate-500">dbt</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Native to BigQuery, so there is no runner to host, no warehouse credentials to manage, and the dependency graph and assertions come with the product at no cost.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> the warehouse is not BigQuery, or the team already has dbt packages, macros and a mature test library that would have to be rewritten.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">Cloud Run + Cloud Scheduler</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">over</span>
+            <span class="text-[13px] text-slate-500">Cloud Composer</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">One scheduled pipeline does not need Airflow. Composer bills a floor of roughly $300 a month for an idle environment; a container that scales to zero costs approximately nothing and fails just as loudly.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> there are many interdependent DAGs, real backfills, per-task retries and a dependency graph a human needs to look at. That is the point where writing your own orchestrator starts costing more than renting one.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">Pub/Sub + Cloud Run subscriber</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">alongside</span>
+            <span class="text-[13px] text-slate-500">Dataflow + Apache Beam</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Both exist here on purpose. Per-message validation and insertion is stateless, so a subscriber that scales to zero is the right tool. Anything that aggregates across a stream is not, which is why P05 is a genuine Beam streaming job.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> the answer depends on event time rather than arrival time &mdash; windowing, watermarks, late-arriving claims, early results that get corrected. A subscriber cannot express that without rebuilding Beam badly.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">statsmodels GLM</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">over</span>
+            <span class="text-[13px] text-slate-500">BigQuery ML</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Pure premium is modelled as a Tweedie GLM with variance power 1.5, which handles a target that is zero for most policies and continuous for the rest. The fitted coefficients matter as much as the predictions, because a rate has to be explainable to a regulator, not just accurate.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">The other one wins when:</span> the training set is too large to pull out of BigQuery, or the model family on offer is genuinely adequate and keeping everything in SQL is worth more than control over the fit.</p>
+    </div>
+</div>
+
+<!-- 7. Limits -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">What This Deliberately Does Not Do</h3>
+<div class="card p-4 mb-2">
+    <ul class="space-y-3.5 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">The data is synthetic.</strong> Volumes and distributions are realistic enough to exercise the patterns, and no real policyholder data was used. Treat the numbers on these pages as a demonstration of method, not as a book of business.</li>
+        <li><strong class="text-slate-800">No slowly changing dimensions.</strong> <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dim_policy</code> overwrites on change, so a policy that switches coverage loses its history. Correct for the questions this platform answers today; wrong the moment anyone asks a retrospective one, and a Type 2 rebuild is the honest fix rather than a patch.</li>
+        <li><strong class="text-slate-800">Terraform is not applied by CI.</strong> <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">terraform fmt -check</code> is the only automated gate; plans and applies are run by hand. Plan-on-pull-request is the intended next step and is not wired yet, which means drift between the configuration and the live project is still caught by a person rather than a pipeline.</li>
+        <li><strong class="text-slate-800">One region, no disaster recovery.</strong> Everything runs in <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">us-central1</code>. That is a deliberate cost decision for a portfolio, and it would be an unacceptable one for a production insurer.</li>
+        <li><strong class="text-slate-800">Reserving stops at the triangle.</strong> Chain-ladder development factors are computed and shown. Bornhuetter-Ferguson, a tail factor, and any stochastic reserve with a confidence interval around it are not implemented.</li>
+    </ul>
+</div>
+<p class="text-[13px] text-slate-500 mb-6">
+    Full decision records, cost estimates and post-mortems live in each project's README in
+    <a href="https://github.com/GonorAndres/data-engineer-path" class="underline hover:text-slate-700" target="_blank" rel="noopener">the repository</a>.
+</p>
+
+</div>
+
+<!-- ─── SPANISH ─────────────────────────────────── -->
+<div data-lang="es" class="hidden">
+
+<p class="section-context mb-2">
+    <a href="/how-its-built" class="underline hover:text-slate-900">Cómo Se Construyó</a> es el inventario:
+    los seis proyectos, los servicios, el diagrama. Esta página es el <strong>método</strong>: cómo una
+    pregunta actuarial se convierte en una tabla en la que otra persona puede confiar, y cuáles de las
+    decisiones del camino eran decisiones de ingeniería disfrazadas.
+</p>
+<p class="section-context mb-6">
+    Está escrita para servir dos veces: como evidencia de cómo trabajo, y como referencia para quien
+    esté construyendo algo parecido sobre Google Cloud con datos de seguros. Cada afirmación de abajo
+    apunta a un archivo en
+    <a href="https://github.com/GonorAndres/data-engineer-path" class="underline hover:text-slate-900" target="_blank" rel="noopener">el repositorio</a>.
+</p>
+
+<!-- 1. La intersección -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Cuatro Disciplinas, Una Tabla</h3>
+<p class="section-context mb-3">
+    Una tabla de siniestros es donde se encuentran cuatro oficios. En la mayoría de las aseguradoras esos
+    oficios viven en equipos distintos, y los traspasos entre ellos son donde se va el tiempo y donde
+    nacen los desacuerdos. Construir los cuatro lados es justamente el punto de esta plataforma.
+</p>
+<div class="card p-5 mb-6 overflow-x-auto">
+    <svg viewBox="0 0 900 236" class="w-full min-w-[720px]" style="max-height:250px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="200" height="70" rx="8" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="1.2"/>
+        <text x="100" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#5B21B6">Ciencia Actuarial</text>
+        <text x="100" y="45" text-anchor="middle" font-size="10" fill="#8B5CF6">Qué tiene que</text>
+        <text x="100" y="59" text-anchor="middle" font-size="10" fill="#8B5CF6">significar el número</text>
+
+        <rect x="233" y="0" width="200" height="70" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.2"/>
+        <text x="333" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#1E40AF">Analítica</text>
+        <text x="333" y="45" text-anchor="middle" font-size="10" fill="#60A5FA">Qué se está</text>
+        <text x="333" y="59" text-anchor="middle" font-size="10" fill="#60A5FA">preguntando en realidad</text>
+
+        <rect x="466" y="0" width="200" height="70" rx="8" fill="#FFF7ED" stroke="#FDBA74" stroke-width="1.2"/>
+        <text x="566" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#9A3412">Ingeniería de Datos</text>
+        <text x="566" y="45" text-anchor="middle" font-size="10" fill="#FB923C">Cómo se calcula,</text>
+        <text x="566" y="59" text-anchor="middle" font-size="10" fill="#FB923C">igual todas las veces</text>
+
+        <rect x="699" y="0" width="200" height="70" rx="8" fill="#ECFDF5" stroke="#6EE7B7" stroke-width="1.2"/>
+        <text x="799" y="27" text-anchor="middle" font-size="12" font-weight="600" fill="#065F46">Gobierno de Datos</text>
+        <text x="799" y="45" text-anchor="middle" font-size="10" fill="#34D399">Por qué seguirá siendo</text>
+        <text x="799" y="59" text-anchor="middle" font-size="10" fill="#34D399">confiable en un año</text>
+
+        <path d="M100 72 L100 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge-es)"/>
+        <path d="M333 72 L333 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge-es)"/>
+        <path d="M566 72 L566 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge-es)"/>
+        <path d="M799 72 L799 98" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge-es)"/>
+
+        <rect x="90" y="104" width="720" height="52" rx="8" fill="#F1F5F9" stroke="#CBD5E1" stroke-width="1.4"/>
+        <text x="450" y="127" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Una tabla modelada</text>
+        <text x="450" y="145" text-anchor="middle" font-size="10" fill="#64748B">fct_claims &middot; fct_claim_payments &middot; rpt_loss_triangle</text>
+
+        <path d="M450 158 L450 182" stroke="#94A3B8" stroke-width="1.5" marker-end="url(#converge-es)"/>
+
+        <rect x="285" y="188" width="330" height="46" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2"/>
+        <text x="450" y="208" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Una decisión que alguien puede defender</text>
+        <text x="450" y="224" text-anchor="middle" font-size="9" fill="#94A3B8">reserva &middot; tarifa &middot; reaseguro &middot; capital</text>
+
+        <defs><marker id="converge-es" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#94A3B8"/></marker></defs>
+    </svg>
+</div>
+
+<!-- 2. Ejemplo trabajado -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Cómo una Pregunta se Vuelve una Tabla</h3>
+<p class="section-context mb-3">
+    Este es el camino que siguió de verdad la página del
+    <a href="/loss-triangle" class="underline hover:text-slate-900">Triángulo de Pérdidas</a>, paso a paso.
+    Es la misma forma que sigue cada una de las demás páginas de este dashboard.
+</p>
+<div class="card p-5 mb-6">
+    <ol class="space-y-4">
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">1</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Empezar por la pregunta actuarial, no por los datos</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed">&laquo;¿Cuánto del año de ocurrencia 2021 sigue sin pagarse?&raquo; Esa es una pregunta de reservas, y responderla exige montos pagados acumulados ordenados por año de ocurrencia contra año de desarrollo. Nada en los archivos fuente sugiere esa forma; la forma viene de la pregunta.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">2</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Definir el grano, que es la decisión que de verdad importa</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed">Un siniestro no se paga una sola vez. Se paga varias veces a lo largo de los años, que es precisamente la razón de existir de los triángulos. Por eso el hecho base es <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">fct_claim_payments</code>, un renglón por pago, y <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">development_year</code> se deriva en ese grano, de la fecha de ocurrencia a la fecha de pago. Elegir grano de siniestro aquí no produciría una consulta lenta: produciría una reserva equivocada, en silencio.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">3</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Fijar el contrato con la fuente antes de transformar</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">stg_claim_payments</code> declara <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">payment_id</code> único y cuatro columnas obligatorias. Un solo pago duplicado no rompe nada aguas abajo: infla una celda del triángulo y con ella todos los factores de desarrollo que salen de ahí. La validación cuesta menos que la investigación.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">4</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Transformar por capas, una tarea cada una</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">int_claim_payments_cumulative</code> acumula con una función de ventana particionada por año de ocurrencia y ordenada por año de desarrollo. <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">rpt_loss_triangle</code> solo lo pivotea a columnas. Separarlos significa que la lógica de acumulación existe una vez, y que el pivote puede cambiar sin que nadie vuelva a derivar las matemáticas.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">5</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Validar aquello que sería invisible si estuviera mal</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">assert_payment_dates</code> exige que ningún pago sea anterior a su fecha de ocurrencia. Un año de desarrollo negativo no es una curiosidad: mueve dinero a una celda que no debería existir, y el triángulo se sigue viendo perfecto. Las validaciones que vale la pena escribir son aquellas cuya falla parece una respuesta válida.</p>
+            </div>
+        </li>
+        <li class="flex items-start gap-3">
+            <span class="shrink-0 w-6 h-6 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center mt-0.5">6</span>
+            <div>
+                <span class="block text-[14px] font-semibold text-slate-800">Servir una tabla, no una consulta</span>
+                <p class="text-[13px] text-slate-500 mt-1 leading-relaxed">El dashboard lee <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">rpt_loss_triangle</code> con un <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">SELECT *</code> y calcula los factores chain-ladder en la página. Ninguna lógica de negocio vive en la capa de presentación, así que el número en pantalla y el número en un notebook salen del mismo lugar.</p>
+            </div>
+        </li>
+    </ol>
+</div>
+
+<!-- 3. Regla de capas -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">La Regla de las Capas</h3>
+<p class="section-context mb-3">
+    Dieciséis tablas que Dataform construye, repartidas en cinco capas. La regla es que cada capa puede hacer un solo tipo de
+    trabajo, de modo que cuando una página necesita una columna nueva la pregunta sea
+    <em>a qué capa pertenece esto</em> y no <em>qué consulta edito</em>.
+</p>
+<div class="card divide-y divide-slate-100 mb-6">
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">raw_<span class="text-slate-400 font-normal">&nbsp;&middot; 5 declaraciones</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Se declaran, nunca se crean. Dataform lee estas tablas y no tiene permiso de escribirlas, lo que mantiene la carga de datos como un paso separado y auditable respecto de la transformación. También es la forma más común de romper una reconstrucción desde cero: si se corre el workflow contra una capa cruda vacía, falla en el primer modelo de staging.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">stg_<span class="text-slate-400 font-normal">&nbsp;&middot; 5 tablas</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Renombrar, castear, limpiar. Estrictamente uno a uno con la fuente, sin joins y sin lógica de negocio, para que un cambio en el origen tenga exactamente un lugar donde aterrizar. Aquí se declaran los contratos de unicidad y de campos obligatorios.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">int_<span class="text-slate-400 font-normal">&nbsp;&middot; 3 tablas</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Joins y derivaciones que más de un mart necesita: siniestros enriquecidos, pagos acumulados, exposición de pólizas. No se exponen a ningún consumidor, y eso es justo lo que las hace seguras de reestructurar.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">dim_ / fct_<span class="text-slate-400 font-normal">&nbsp;&middot; 6 tablas</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">El modelo en sí, y la única capa contra la que alguien debería hacer joins. <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">fct_claims</code> está particionada por <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">accident_date</code> y agrupada por <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">coverage_type, claim_status</code>: los dos cortes con los que empieza cualquier pregunta actuarial.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[190px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">rpt_<span class="text-slate-400 font-normal">&nbsp;&middot; 2 tablas</span></span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Con la forma exacta de una pregunta y baratas de leer, porque una página que corre una consulta de seis joins es una página que tarde o temprano se cae enfrente de alguien.</p>
+    </div>
+</div>
+
+<!-- 4. Decisiones actuariales -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Decisiones Actuariales que en Realidad son de Modelado</h3>
+<p class="section-context mb-3">
+    Las cuatro parecen detalles de esquema en una revisión de código. Cada una es un juicio actuarial que
+    quedó permanente en el momento en que se escribió dentro de una tabla.
+</p>
+<div class="card divide-y divide-slate-100 mb-6">
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Particionar por fecha de ocurrencia, no de reporte</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Ambas fechas están en la tabla; solo una es la llave de partición. Todo corte de reservas y de tarifa es por año de ocurrencia, así que particionar ahí hace que la consulta habitual lea una fracción de la tabla sin costo extra. La fecha de reporte es la vista operativa: útil para gestión de siniestros, equivocada como distribución física de un hecho analítico.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Derivar el año de desarrollo una sola vez</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Se calcula en el grano de pago dentro del almacén y nunca se vuelve a calcular aguas abajo. La alternativa, que cada analista lo derive en su propia consulta, es exactamente la forma en que dos personas producen dos reservas distintas de una misma base y se llevan una semana averiguando por qué.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">Mantener indemnización y gasto separados</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed"><code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">fct_claims</code> lleva <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">total_indemnity</code> y <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">total_expense</code> como sumas distintas. El gasto asignado no es siniestro. Juntarlos en una sola columna sobreestima la severidad, distorsiona el patrón de desarrollo, y ya no se puede deshacer sin regresar al grano de pago.</p>
+    </div>
+    <div class="p-4 grid md:grid-cols-[230px_1fr] gap-1 md:gap-4">
+        <span class="text-[13px] font-semibold text-slate-800">La exposición es un offset, no una variable</span>
+        <p class="text-[13px] text-slate-500 leading-relaxed">El modelo de frecuencia es un GLM Poisson con liga logarítmica y la exposición entrando como offset, para que una póliza vigente tres meses no se compare directo contra una vigente doce. Pasar la exposición como covariable normal deja que el modelo estime un coeficiente para algo que la aritmética ya fija en uno.</p>
+    </div>
+</div>
+
+<!-- 5. Gobierno -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Qué Significa Gobierno de Datos Aquí</h3>
+<p class="section-context mb-3">
+    En un proyecto de portafolio, gobierno de datos suele significar un párrafo prometiéndolo. Estas son
+    las piezas que realmente corren, y contra qué protege cada una.
+</p>
+<div class="card p-4 mb-6">
+    <ul class="space-y-3.5 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Las validaciones son contratos, no pruebas</strong> &mdash; se ejecutan dentro del mismo workflow de Dataform que construye las tablas, así que un supuesto roto detiene a sus dependientes en lugar de descubrirse en un reporte. Tres modelos de validación dedicados más las declaraciones de unicidad y campos obligatorios en staging y marts.</li>
+        <li><strong class="text-slate-800">Una cuenta de servicio, seis roles con nombre</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.dataEditor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">bigquery.jobUser</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">storage.objectAdmin</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">pubsub.editor</code>, <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">run.invoker</code> y <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">iam.serviceAccountTokenCreator</code>, que Dataform necesita para ejecutar un workflow como esa cuenta. Nada de Owner, nada de Editor, nada otorgado porque era más rápido.</li>
+        <li><strong class="text-slate-800">No existe ninguna llave de cuenta de servicio</strong> &mdash; CI se autentica con Workload Identity Federation, amarrado a este repositorio de GitHub en específico. No hay archivo de credenciales que se pueda filtrar, rotar ni subir por accidente.</li>
+        <li><strong class="text-slate-800">El costo está acotado por diseño</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">max_bytes_billed</code> limita cualquier consulta de Dataform a 10&nbsp;GiB, de modo que un join mal escrito falla en vez de facturar. La partición y el clustering hacen el resto, y el dashboard cachea resultados cinco minutos en lugar de re-escanear por cada visitante.</li>
+        <li><strong class="text-slate-800">Los ambientes se separan por prefijo, desde una variable</strong> &mdash; <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dev_claims_*</code> contra <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">claims_*</code>, resuelto en la configuración de cada modelo. Promover es cambiar una variable, no mantener una segunda copia del SQL.</li>
+        <li><strong class="text-slate-800">Los despliegues son canarios</strong> &mdash; cada revisión sale sin tráfico y con etiqueta, se prueba en su propia URL verificando contenido y no solo un 200, y apenas entonces recibe tráfico. Si la prueba falla, la revisión anterior sigue sirviendo, así que no hay nada que revertir.</li>
+        <li><strong class="text-slate-800">El health check cierra su propio issue</strong> &mdash; un job diario verifica que el sitio responda, que BigQuery esté conectado y que las URLs viejas sigan redirigiendo. Si falla abre un issue en GitHub; la siguiente corrida en verde lo cierra. Un issue abierto significa entonces roto ahora, no roto alguna vez.</li>
+    </ul>
+</div>
+
+<!-- 6. Decisiones GCP -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Decisiones de GCP, y el Argumento a Favor de la Otra Opción</h3>
+<p class="section-context mb-3">
+    Una decisión solo vale la pena documentarla junto con las condiciones que la revertirían. Estas son
+    las cuatro que le dieron forma a la plataforma.
+</p>
+<div class="card divide-y divide-slate-100 mb-6">
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">Dataform</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">en vez de</span>
+            <span class="text-[13px] text-slate-500">dbt</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Nativo de BigQuery: no hay runner que hospedar, no hay credenciales de almacén que administrar, y el grafo de dependencias y las validaciones vienen incluidos sin costo.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> el almacén no es BigQuery, o el equipo ya tiene paquetes, macros y una librería madura de pruebas en dbt que habría que reescribir.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">Cloud Run + Cloud Scheduler</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">en vez de</span>
+            <span class="text-[13px] text-slate-500">Cloud Composer</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Un solo pipeline programado no necesita Airflow. Composer cobra un piso de unos 300 dólares al mes por un ambiente ocioso; un contenedor que escala a cero cuesta prácticamente nada y falla igual de fuerte.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> hay muchos DAGs interdependientes, backfills de verdad, reintentos por tarea y un grafo de dependencias que un humano necesita mirar. Ese es el punto donde escribir tu propio orquestador empieza a costar más que rentar uno.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">Pub/Sub + suscriptor en Cloud Run</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">junto con</span>
+            <span class="text-[13px] text-slate-500">Dataflow + Apache Beam</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">Los dos existen aquí a propósito. Validar e insertar mensaje por mensaje no guarda estado, así que un suscriptor que escala a cero es la herramienta correcta. Cualquier cosa que agregue a lo largo del flujo no lo es, y por eso P05 es un job de streaming real en Beam.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> la respuesta depende del tiempo del evento y no del de llegada: ventanas, watermarks, siniestros que llegan tarde, resultados anticipados que después se corrigen. Un suscriptor no puede expresar eso sin reconstruir Beam a medias.</p>
+    </div>
+    <div class="p-4">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1.5">
+            <span class="text-[13px] font-semibold text-slate-800">GLM con statsmodels</span>
+            <span class="text-[11px] text-slate-400 uppercase tracking-wide">en vez de</span>
+            <span class="text-[13px] text-slate-500">BigQuery ML</span>
+        </div>
+        <p class="text-[13px] text-slate-500 leading-relaxed">La prima pura se modela con un GLM Tweedie de potencia de varianza 1.5, que maneja un objetivo que vale cero para la mayoría de las pólizas y es continuo para el resto. Los coeficientes ajustados importan tanto como las predicciones, porque una tarifa tiene que poder explicarse ante un regulador, no solo ser precisa.</p>
+        <p class="text-[12px] text-slate-400 leading-relaxed mt-1.5"><span class="italic">La otra opción gana cuando:</span> el conjunto de entrenamiento es demasiado grande para sacarlo de BigQuery, o la familia de modelos disponible alcanza de sobra y quedarse en SQL vale más que el control sobre el ajuste.</p>
+    </div>
+</div>
+
+<!-- 7. Límites -->
+<h3 class="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">Lo Que Deliberadamente No Hace</h3>
+<div class="card p-4 mb-2">
+    <ul class="space-y-3.5 text-[13px] text-slate-600">
+        <li><strong class="text-slate-800">Los datos son sintéticos.</strong> Los volúmenes y las distribuciones son lo bastante realistas para ejercitar los patrones, y no se usó información de ningún asegurado real. Los números de estas páginas son una demostración de método, no una cartera.</li>
+        <li><strong class="text-slate-800">No hay dimensiones de cambio lento.</strong> <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">dim_policy</code> sobrescribe al cambiar, así que una póliza que cambia de cobertura pierde su historia. Es correcto para las preguntas que esta plataforma responde hoy y deja de serlo en cuanto alguien haga una pregunta retrospectiva; la solución honesta es reconstruirla como Tipo 2, no parcharla.</li>
+        <li><strong class="text-slate-800">Terraform no lo aplica CI.</strong> <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">terraform fmt -check</code> es la única compuerta automática; los planes y los applies se corren a mano. El plan en cada pull request es el siguiente paso previsto y todavía no está conectado, lo que significa que la deriva entre la configuración y el proyecto vivo la detecta una persona y no un pipeline.</li>
+        <li><strong class="text-slate-800">Una sola región, sin plan de recuperación.</strong> Todo corre en <code class="text-[11px] bg-slate-100 px-1 py-0.5 rounded">us-central1</code>. Es una decisión deliberada de costo para un portafolio, y sería inaceptable para una aseguradora en producción.</li>
+        <li><strong class="text-slate-800">Las reservas se detienen en el triángulo.</strong> Se calculan y se muestran los factores de desarrollo chain-ladder. Bornhuetter-Ferguson, un factor de cola, y cualquier reserva estocástica con un intervalo de confianza alrededor no están implementados.</li>
+    </ul>
+</div>
+<p class="text-[13px] text-slate-500 mb-6">
+    Los registros de decisión completos, las estimaciones de costo y los post-mortems viven en el README
+    de cada proyecto dentro del
+    <a href="https://github.com/GonorAndres/data-engineer-path" class="underline hover:text-slate-700" target="_blank" rel="noopener">repositorio</a>.
+</p>
+
+</div>
+{% endblock %}

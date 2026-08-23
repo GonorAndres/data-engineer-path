@@ -614,7 +614,7 @@ jobs:
             exit 1
           fi
 
-          for p in loss-triangle portfolio-health pricing-adequacy geographic-risk how-its-built; do
+          for p in loss-triangle portfolio-health pricing-adequacy geographic-risk how-its-built methodology; do
             CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$URL/$p")
             echo "  /$p -> $CODE"
             [ "$CODE" = "200" ] || { echo "::error title=Canary route failed::/$p returned $CODE"; exit 1; }
