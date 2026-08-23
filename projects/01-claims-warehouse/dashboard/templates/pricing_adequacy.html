@@ -102,84 +102,108 @@ waitForPlotly(function() {
     var data = {{ chart_data | tojson }};
     var base = window.DashboardPlotly.baseLayout, cfg = window.DashboardPlotly.config;
 
-    document.querySelectorAll('.chart-skeleton').forEach(function(el) { el.classList.remove('chart-skeleton'); });
+    // Chart chrome and table headers this script writes itself; data values
+    // (assessment names, coverage types, age bands) come from the warehouse
+    // and stay as they are.
+    var STR = {
+        en: { predicted: 'Predicted Pure Premium (MXN)', actual: 'Actual Premium (MXN)',
+              ratio: 'Ratio', pred: 'Predicted', act: 'Actual',
+              cols: { policy_id: 'Policy ID', coverage_type: 'Coverage', age_band: 'Age Band',
+                      state_risk_group: 'State Risk', predicted_pure_premium: 'Predicted PP',
+                      actual_premium: 'Actual Premium', price_adequacy_ratio: 'Adequacy Ratio' } },
+        es: { predicted: 'Prima Pura Estimada (MXN)', actual: 'Prima Real (MXN)',
+              ratio: 'Razón', pred: 'Estimada', act: 'Real',
+              cols: { policy_id: 'ID de Póliza', coverage_type: 'Cobertura', age_band: 'Banda de Edad',
+                      state_risk_group: 'Riesgo Estatal', predicted_pure_premium: 'PP Estimada',
+                      actual_premium: 'Prima Real', price_adequacy_ratio: 'Razón de Adecuación' } },
+    };
 
-    if (data.scatter) {
-        Plotly.newPlot('scatter-chart', data.scatter.map(function(t) {
-            return {
-                x:t.x, y:t.y, name:t.name, type:'scatter', mode:'markers',
-                marker:{color:t.color, opacity:0.45, size:4},
-                hovertemplate:'Predicted: %{x:,.0f}<br>Actual: %{y:,.0f}<extra>'+t.name+'</extra>',
-            };
-        }), {
-            ...base, height:440,
-            margin:{l:65, r:16, t:16, b:70},
-            xaxis:{...base.xaxis, title:{text:'Predicted Pure Premium (MXN)', standoff:12}, tickformat:',.0f'},
-            yaxis:{...base.yaxis, title:{text:'Actual Premium (MXN)', standoff:8}, tickformat:',.0f'},
-            legend:{orientation:'h', y:-0.22, x:0.5, xanchor:'center', font:{size:11}},
-        }, cfg);
+    function render() {
+        // Looked up inside render, not outside: outside would freeze the
+        // language at first draw and langchange would repaint nothing.
+        var L = STR[window.currentLang] || STR.en;
+
+        document.querySelectorAll('.chart-skeleton').forEach(function(el) { el.classList.remove('chart-skeleton'); });
+
+        if (data.scatter) {
+            Plotly.react('scatter-chart', data.scatter.map(function(t) {
+                return {
+                    x:t.x, y:t.y, name:t.name, type:'scatter', mode:'markers',
+                    marker:{color:t.color, opacity:0.45, size:4},
+                    hovertemplate:L.pred+': %{x:,.0f}<br>'+L.act+': %{y:,.0f}<extra>'+t.name+'</extra>',
+                };
+            }), {
+                ...base, height:440,
+                margin:{l:65, r:16, t:16, b:70},
+                xaxis:{...base.xaxis, title:{text:L.predicted, standoff:12}, tickformat:',.0f'},
+                yaxis:{...base.yaxis, title:{text:L.actual, standoff:8}, tickformat:',.0f'},
+                legend:{orientation:'h', y:-0.22, x:0.5, xanchor:'center', font:{size:11}},
+            }, cfg);
+        }
+
+        if (data.pie) {
+            Plotly.react('pie-chart', [{
+                labels:data.pie.labels, values:data.pie.values, type:'pie',
+                marker:{colors:data.pie.colors},
+                textinfo:'percent', textposition:'inside', textfont:{size:13, color:'#fff'},
+                hovertemplate:'%{label}: %{value:,} (%{percent})<extra></extra>',
+                hole:0.48,
+            }], {
+                ...base, height:440, showlegend:true,
+                legend:{orientation:'h', y:-0.08, x:0.5, xanchor:'center', font:{size:11}},
+                margin:{l:8, r:8, t:20, b:40},
+            }, cfg);
+        }
+
+        if (data.age_bar) {
+            Plotly.react('age-chart', [{
+                x:data.age_bar.x, y:data.age_bar.y, type:'bar',
+                marker:{color:'#2563EB', cornerradius:3},
+                text:data.age_bar.y.map(function(v){return v!=null?v.toFixed(2):'';}),
+                textposition:'outside',
+                hovertemplate:'%{x}: %{y:.2f}<extra></extra>',
+            }], {
+                ...base, height:340, showlegend:false,
+                margin:{l:50, r:16, t:16, b:50},
+                xaxis:{...base.xaxis},
+                yaxis:{...base.yaxis, title:{text:L.ratio, standoff:4}},
+            }, cfg);
+        }
+
+        if (data.state_bar) {
+            Plotly.react('state-chart', [{
+                x:data.state_bar.x, y:data.state_bar.y, type:'bar',
+                marker:{color:'#7C3AED', cornerradius:3},
+                text:data.state_bar.y.map(function(v){return v!=null?v.toFixed(2):'';}),
+                textposition:'outside',
+                hovertemplate:'%{x}: %{y:.2f}<extra></extra>',
+            }], {
+                ...base, height:340, showlegend:false,
+                margin:{l:50, r:16, t:16, b:50},
+                xaxis:{...base.xaxis},
+                yaxis:{...base.yaxis, title:{text:L.ratio, standoff:4}},
+            }, cfg);
+        }
+
+        if (data.underpriced_table) {
+            var tbl = data.underpriced_table;
+            var thead = document.querySelector('#underpriced-table thead');
+            var tbody = document.querySelector('#underpriced-table tbody');
+            thead.innerHTML = '<tr>' + tbl.columns.map(function(c){return '<th>'+(L.cols[c]||c)+'</th>';}).join('') + '</tr>';
+            var fmtCols = ['predicted_pure_premium','actual_premium'];
+            tbody.innerHTML = tbl.rows.map(function(row) {
+                return '<tr>' + row.map(function(val, i) {
+                    var c = tbl.columns[i];
+                    if (val!=null && fmtCols.indexOf(c)!==-1) return '<td>$'+Number(val).toLocaleString(undefined,{maximumFractionDigits:0})+'</td>';
+                    if (val!=null && c==='price_adequacy_ratio') return '<td>'+Number(val).toFixed(2)+'</td>';
+                    return '<td>'+(val!=null?val:'')+'</td>';
+                }).join('') + '</tr>';
+            }).join('');
+        }
     }
 
-    if (data.pie) {
-        Plotly.newPlot('pie-chart', [{
-            labels:data.pie.labels, values:data.pie.values, type:'pie',
-            marker:{colors:data.pie.colors},
-            textinfo:'percent', textposition:'inside', textfont:{size:13, color:'#fff'},
-            hovertemplate:'%{label}: %{value:,} (%{percent})<extra></extra>',
-            hole:0.48,
-        }], {
-            ...base, height:440, showlegend:true,
-            legend:{orientation:'h', y:-0.08, x:0.5, xanchor:'center', font:{size:11}},
-            margin:{l:8, r:8, t:20, b:40},
-        }, cfg);
-    }
-
-    if (data.age_bar) {
-        Plotly.newPlot('age-chart', [{
-            x:data.age_bar.x, y:data.age_bar.y, type:'bar',
-            marker:{color:'#2563EB', cornerradius:3},
-            text:data.age_bar.y.map(function(v){return v!=null?v.toFixed(2):'';}),
-            textposition:'outside',
-            hovertemplate:'%{x}: %{y:.2f}<extra></extra>',
-        }], {
-            ...base, height:340, showlegend:false,
-            margin:{l:50, r:16, t:16, b:50},
-            xaxis:{...base.xaxis},
-            yaxis:{...base.yaxis, title:{text:'Ratio', standoff:4}},
-        }, cfg);
-    }
-
-    if (data.state_bar) {
-        Plotly.newPlot('state-chart', [{
-            x:data.state_bar.x, y:data.state_bar.y, type:'bar',
-            marker:{color:'#7C3AED', cornerradius:3},
-            text:data.state_bar.y.map(function(v){return v!=null?v.toFixed(2):'';}),
-            textposition:'outside',
-            hovertemplate:'%{x}: %{y:.2f}<extra></extra>',
-        }], {
-            ...base, height:340, showlegend:false,
-            margin:{l:50, r:16, t:16, b:50},
-            xaxis:{...base.xaxis},
-            yaxis:{...base.yaxis, title:{text:'Ratio', standoff:4}},
-        }, cfg);
-    }
-
-    if (data.underpriced_table) {
-        var tbl = data.underpriced_table;
-        var labels = { policy_id:'Policy ID', coverage_type:'Coverage', age_band:'Age Band', state_risk_group:'State Risk', predicted_pure_premium:'Predicted PP', actual_premium:'Actual Premium', price_adequacy_ratio:'Adequacy Ratio' };
-        var thead = document.querySelector('#underpriced-table thead');
-        var tbody = document.querySelector('#underpriced-table tbody');
-        thead.innerHTML = '<tr>' + tbl.columns.map(function(c){return '<th>'+(labels[c]||c)+'</th>';}).join('') + '</tr>';
-        var fmtCols = ['predicted_pure_premium','actual_premium'];
-        tbody.innerHTML = tbl.rows.map(function(row) {
-            return '<tr>' + row.map(function(val, i) {
-                var c = tbl.columns[i];
-                if (val!=null && fmtCols.indexOf(c)!==-1) return '<td>$'+Number(val).toLocaleString(undefined,{maximumFractionDigits:0})+'</td>';
-                if (val!=null && c==='price_adequacy_ratio') return '<td>'+Number(val).toFixed(2)+'</td>';
-                return '<td>'+(val!=null?val:'')+'</td>';
-            }).join('') + '</tr>';
-        }).join('');
-    }
+    render();
+    document.addEventListener('langchange', render);
 });
 </script>
 {% endif %}

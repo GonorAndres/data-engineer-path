@@ -23,7 +23,9 @@
 
 {% if error %}
 <div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
-    Could not load loss triangle. {{ error }}
+    <span data-lang="en">Could not load loss triangle.</span>
+    <span data-lang="es" class="hidden">No se pudo cargar el triángulo de pérdidas.</span>
+    {{ error }}
 </div>
 {% endif %}
 
@@ -61,47 +63,67 @@
 waitForPlotly(function() {
     var data = {{ chart_data | tojson }};
     var factors = {{ factors_data | tojson }};
-
     var el = document.getElementById('heatmap-chart');
-    el.classList.remove('chart-skeleton');
 
-    Plotly.newPlot(el, [{
-        type: 'heatmap',
-        z: data.z, x: data.x, y: data.y,
-        text: data.text, texttemplate: '%{text}',
-        hovertemplate: 'AY %{y}, %{x}: %{z:,.0f} MXN<extra></extra>',
-        colorscale: [[0,'#EFF6FF'],[0.25,'#BFDBFE'],[0.5,'#60A5FA'],[0.75,'#2563EB'],[1,'#1E40AF']],
-        showscale: true,
-        colorbar: { thickness: 12, outlinewidth: 0, tickformat: ',.0f' },
-    }], {
-        ...window.DashboardPlotly.baseLayout,
-        yaxis: { ...window.DashboardPlotly.baseLayout.yaxis, title: 'Accident Year', autorange: 'reversed' },
-        xaxis: { ...window.DashboardPlotly.baseLayout.xaxis, title: '', side: 'top' },
-        height: 420,
-        margin: { l: 70, r: 16, t: 40, b: 16 },
-    }, window.DashboardPlotly.config);
+    // Chart chrome the data-lang mechanism cannot reach: Plotly renders its
+    // own SVG, and the factors table is assembled here. Data values (the
+    // Dev-N labels, the years) come from the warehouse and stay as they are.
+    var STR = {
+        en: { ay: 'Accident Year', wavg: 'Weighted Avg',
+              hover: 'AY %{y}, %{x}: %{z:,.0f} MXN<extra></extra>' },
+        es: { ay: 'Año de Ocurrencia', wavg: 'Promedio Ponderado',
+              hover: 'AO %{y}, %{x}: %{z:,.0f} MXN<extra></extra>' },
+    };
 
-    // Factors table
-    var thead = document.querySelector('#factors-table thead');
-    var tbody = document.querySelector('#factors-table tbody');
-    var hdr = '<tr><th>Accident Year</th>';
-    factors.columns.forEach(function(c) { hdr += '<th>' + c + '</th>'; });
-    thead.innerHTML = hdr + '</tr>';
+    function render() {
+        // Looked up inside render, not outside: outside would freeze the
+        // language at first draw and langchange would repaint nothing.
+        var L = STR[window.currentLang] || STR.en;
+        el.classList.remove('chart-skeleton');
 
-    factors.y_labels.forEach(function(label, i) {
-        var row = '<tr><td class="font-medium">' + label + '</td>';
-        factors.rows.forEach(function(col) {
-            var v = col[i];
-            row += '<td>' + (v !== null ? v.toFixed(4) : '') + '</td>';
+        // react, not newPlot: newPlot purges the div on every language
+        // toggle, stripping .js-plotly-plot and replaying the entrance fade.
+        Plotly.react(el, [{
+            type: 'heatmap',
+            z: data.z, x: data.x, y: data.y,
+            text: data.text, texttemplate: '%{text}',
+            hovertemplate: L.hover,
+            colorscale: [[0,'#EFF6FF'],[0.25,'#BFDBFE'],[0.5,'#60A5FA'],[0.75,'#2563EB'],[1,'#1E40AF']],
+            showscale: true,
+            colorbar: { thickness: 12, outlinewidth: 0, tickformat: ',.0f' },
+        }], {
+            ...window.DashboardPlotly.baseLayout,
+            yaxis: { ...window.DashboardPlotly.baseLayout.yaxis, title: L.ay, autorange: 'reversed' },
+            xaxis: { ...window.DashboardPlotly.baseLayout.xaxis, title: '', side: 'top' },
+            height: 420,
+            margin: { l: 70, r: 16, t: 40, b: 16 },
+        }, window.DashboardPlotly.config);
+
+        // Factors table, built as one string and assigned once. This re-runs
+        // on every language toggle, and += against live innerHTML would
+        // duplicate the rows each time through.
+        var hdr = '<tr><th>' + L.ay + '</th>';
+        factors.columns.forEach(function(c) { hdr += '<th>' + c + '</th>'; });
+        document.querySelector('#factors-table thead').innerHTML = hdr + '</tr>';
+
+        var body = '';
+        factors.y_labels.forEach(function(label, i) {
+            body += '<tr><td class="font-medium">' + label + '</td>';
+            factors.rows.forEach(function(col) {
+                var v = col[i];
+                body += '<td>' + (v !== null ? v.toFixed(4) : '') + '</td>';
+            });
+            body += '</tr>';
         });
-        tbody.innerHTML += row + '</tr>';
-    });
+        body += '<tr class="bg-slate-50 font-semibold"><td>' + L.wavg + '</td>';
+        factors.weighted_avgs.forEach(function(v) {
+            body += '<td>' + (v !== null ? v.toFixed(4) : '') + '</td>';
+        });
+        document.querySelector('#factors-table tbody').innerHTML = body + '</tr>';
+    }
 
-    var avg = '<tr class="bg-slate-50 font-semibold"><td>Weighted Avg</td>';
-    factors.weighted_avgs.forEach(function(v) {
-        avg += '<td>' + (v !== null ? v.toFixed(4) : '') + '</td>';
-    });
-    tbody.innerHTML += avg + '</tr>';
+    render();
+    document.addEventListener('langchange', render);
 });
 </script>
 {% endif %}

@@ -48,6 +48,11 @@ function setLang(lang) {
     document.getElementById('btn-en').classList.toggle('lang-toggle-active', lang === 'en');
     document.getElementById('btn-es').classList.toggle('lang-toggle-active', lang === 'es');
     localStorage.setItem('dashboard-lang', lang);
+    // Chart pages listen for this and re-render their Plotly chrome (axis
+    // titles, hover text) and JS-written labels in the new language --
+    // data-lang spans cannot reach inside an SVG that Plotly owns. Fires
+    // only on a real change, thanks to the guard above.
+    document.dispatchEvent(new CustomEvent('langchange', { detail: { lang: lang } }));
 }
 
 document.addEventListener('DOMContentLoaded', function() {

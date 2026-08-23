@@ -21,7 +21,9 @@
 
 {% if error %}
 <div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
-    Could not load portfolio health data. {{ error }}
+    <span data-lang="en">Could not load portfolio health data.</span>
+    <span data-lang="es" class="hidden">No se pudieron cargar los datos de salud del portafolio.</span>
+    {{ error }}
 </div>
 {% endif %}
 
@@ -40,7 +42,7 @@
                 <div id="coverage-options" class="dropdown-menu hidden">
                     <label class="dropdown-item">
                         <input type="checkbox" id="coverage-all" checked onchange="toggleAllCoverages(this)" class="rounded border-slate-300">
-                        <span class="font-medium">Select All</span>
+                        <span class="font-medium" data-lang="en">Select All</span><span class="font-medium hidden" data-lang="es">Seleccionar todas</span>
                     </label>
                     <div class="border-t border-slate-100 my-1"></div>
                     <div id="coverage-list"></div>
@@ -130,6 +132,20 @@ waitForPlotly(function() {
     var cols = raw.columns;
     var selectedCoverages = new Set(coverages);
 
+    // Labels this script writes itself -- KPI captions, the dropdown summary,
+    // axis titles. data-lang spans cannot cover text that JS overwrites, so
+    // these come from a dict keyed on the current language instead, and
+    // langchange below re-runs applyFilters to repaint them. Coverage names
+    // are warehouse data and stay as they are.
+    var STR = {
+        en: { claims: 'Claims', exposure: 'Exposure', lr: 'Loss Ratio', sev: 'Avg Severity',
+              all: 'All coverages', none: 'None', sel: ' selected',
+              freq: 'Frequency', pp: 'Pure Premium (MXN)' },
+        es: { claims: 'Siniestros', exposure: 'Exposición', lr: 'Razón de Pérdida', sev: 'Severidad Promedio',
+              all: 'Todas las coberturas', none: 'Ninguna', sel: ' seleccionadas',
+              freq: 'Frecuencia', pp: 'Prima Pura (MXN)' },
+    };
+
     var coverageList = document.getElementById('coverage-list');
     coverages.forEach(function(c) {
         var label = document.createElement('label');
@@ -159,14 +175,15 @@ waitForPlotly(function() {
     };
 
     window.applyFilters = function() {
+        var L = STR[window.currentLang] || STR.en;
         selectedCoverages = new Set();
         coverageList.querySelectorAll('input:checked').forEach(function(c) { selectedCoverages.add(c.value); });
         var yMin = parseInt(minSlider.value), yMax = parseInt(maxSlider.value);
         if (yMin > yMax) { var t = yMin; yMin = yMax; yMax = t; }
 
         document.getElementById('coverage-label').textContent =
-            selectedCoverages.size === coverages.length ? 'All coverages' :
-            selectedCoverages.size === 0 ? 'None' : selectedCoverages.size + ' selected';
+            selectedCoverages.size === coverages.length ? L.all :
+            selectedCoverages.size === 0 ? L.none : selectedCoverages.size + L.sel;
         document.getElementById('year-range-label').textContent = yMin + ' – ' + yMax;
 
         var filtered = allRecords.filter(function(r) {
@@ -185,13 +202,13 @@ waitForPlotly(function() {
         var lr = totalEarned > 0 ? totalPaid / totalEarned : null;
         var sev = totalClaims > 0 ? totalPaid / totalClaims : null;
 
-        document.getElementById('kpi-claims-label').textContent = 'Claims (' + latestYear + ')';
+        document.getElementById('kpi-claims-label').textContent = L.claims + ' (' + latestYear + ')';
         document.getElementById('kpi-claims-value').textContent = totalClaims.toLocaleString();
-        document.getElementById('kpi-exposure-label').textContent = 'Exposure (' + latestYear + ')';
+        document.getElementById('kpi-exposure-label').textContent = L.exposure + ' (' + latestYear + ')';
         document.getElementById('kpi-exposure-value').textContent = totalExposure.toLocaleString(undefined, {maximumFractionDigits:1});
-        document.getElementById('kpi-lr-label').textContent = 'Loss Ratio (' + latestYear + ')';
+        document.getElementById('kpi-lr-label').textContent = L.lr + ' (' + latestYear + ')';
         document.getElementById('kpi-lr-value').textContent = lr !== null ? (lr * 100).toFixed(1) + '%' : 'N/A';
-        document.getElementById('kpi-severity-label').textContent = 'Avg Severity (' + latestYear + ')';
+        document.getElementById('kpi-severity-label').textContent = L.sev + ' (' + latestYear + ')';
         document.getElementById('kpi-severity-value').textContent = sev !== null ? '$' + Math.round(sev).toLocaleString() : 'N/A';
 
         var P = window.DashboardPlotly, base = P.baseLayout, cfg = P.config, pal = P.palette;
@@ -205,22 +222,23 @@ waitForPlotly(function() {
                 var rows = byCov[name];
                 return { x: rows.map(function(r){return r.year;}), y: rows.map(function(r){return r.claim_frequency;}), name: name, type:'scatter', mode:'lines+markers', marker:{size:5}, line:{width:2, color:pal[i%pal.length]} };
             });
-            Plotly.react('freq-chart', traces, { ...base, height:340, xaxis:{...base.xaxis, dtick:1}, yaxis:{...base.yaxis, title:'Frequency'}, legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:11}} }, cfg);
+            Plotly.react('freq-chart', traces, { ...base, height:340, xaxis:{...base.xaxis, dtick:1}, yaxis:{...base.yaxis, title:L.freq}, legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:11}} }, cfg);
         }
         if (cols.indexOf('pure_premium') !== -1) {
             var traces2 = Object.keys(byCov).map(function(name, i) {
                 var rows = byCov[name];
                 return { x: rows.map(function(r){return r.year;}), y: rows.map(function(r){return r.pure_premium;}), name: name, type:'scatter', mode:'lines+markers', marker:{size:5}, line:{width:2, color:pal[i%pal.length]} };
             });
-            Plotly.react('premium-chart', traces2, { ...base, height:340, xaxis:{...base.xaxis, dtick:1}, yaxis:{...base.yaxis, title:'Pure Premium (MXN)', tickformat:',.0f'}, legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:11}} }, cfg);
+            Plotly.react('premium-chart', traces2, { ...base, height:340, xaxis:{...base.xaxis, dtick:1}, yaxis:{...base.yaxis, title:L.pp, tickformat:',.0f'}, legend:{orientation:'h',y:-0.18,x:0.5,xanchor:'center',font:{size:11}} }, cfg);
         }
         if (cols.indexOf('loss_ratio') !== -1) {
             var sorted = latest.slice().sort(function(a,b){return (b.loss_ratio||0)-(a.loss_ratio||0);});
             Plotly.react('lr-chart', [{ x:sorted.map(function(r){return r.coverage_type;}), y:sorted.map(function(r){return r.loss_ratio;}), type:'bar', marker:{color:sorted.map(function(_,i){return pal[i%pal.length];}), cornerradius:3}, text:sorted.map(function(r){return r.loss_ratio!=null?(r.loss_ratio*100).toFixed(0)+'%':'';}), textposition:'outside', hovertemplate:'%{x}: %{y:.1%}<extra></extra>' }],
-            { ...base, height:340, showlegend:false, xaxis:{...base.xaxis}, yaxis:{...base.yaxis, title:'Loss Ratio', tickformat:'.0%'} }, cfg);
+            { ...base, height:340, showlegend:false, xaxis:{...base.xaxis}, yaxis:{...base.yaxis, title:L.lr, tickformat:'.0%'} }, cfg);
         }
     };
     applyFilters();
+    document.addEventListener('langchange', applyFilters);
 });
 </script>
 {% endif %}

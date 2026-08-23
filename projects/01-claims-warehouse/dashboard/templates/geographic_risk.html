@@ -23,7 +23,9 @@
 
 {% if error %}
 <div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
-    Could not load geographic data. {{ error }}
+    <span data-lang="en">Could not load geographic data.</span>
+    <span data-lang="es" class="hidden">No se pudieron cargar los datos geográficos.</span>
+    {{ error }}
 </div>
 {% endif %}
 
@@ -131,6 +133,20 @@ waitForPlotly(function() {
     var raw = {{ dataset | tojson }};
     var allRecords = raw.records, states = raw.states, yearMin = raw.year_min, yearMax = raw.year_max, stateNames = raw.state_names;
     var GEOJSON_URL = 'https://raw.githubusercontent.com/angelnmara/geojson/master/mexicoHigh.json';
+
+    // Labels this script writes itself -- the dropdown summary, the colorbar
+    // title, hover text. data-lang spans cannot cover JS-written text or
+    // Plotly's own SVG, so these come from a dict keyed on the current
+    // language, and langchange below re-runs the render. State codes and
+    // names are warehouse data and stay as they are.
+    var STR = {
+        en: { all: 'All states', sel: ' selected', sev: 'Severity',
+              barHover: '%{y}: %{x:,} claims<extra></extra>',
+              mapHover: '%{location}<br>Claims: %{z:,}<extra></extra>' },
+        es: { all: 'Todos los estados', sel: ' seleccionados', sev: 'Severidad',
+              barHover: '%{y}: %{x:,} siniestros<extra></extra>',
+              mapHover: '%{location}<br>Siniestros: %{z:,}<extra></extra>' },
+    };
     var geoJsonData = null;
 
     fetch(GEOJSON_URL).then(function(r){return r.json();}).then(function(d){geoJsonData=d; applyGeoFilters();}).catch(function(){document.getElementById('map-fallback').classList.remove('hidden');});
@@ -154,13 +170,14 @@ waitForPlotly(function() {
     });
 
     window.applyGeoFilters = function() {
+        var L = STR[window.currentLang] || STR.en;
         var yMin = parseInt(minSlider.value), yMax = parseInt(maxSlider.value);
         if (yMin > yMax) { var t=yMin; yMin=yMax; yMax=t; }
         document.getElementById('geo-year-label').textContent = yMin + ' – ' + yMax;
 
         var checkedStates = new Set();
         stateList.querySelectorAll('input:checked').forEach(function(c){checkedStates.add(c.value);});
-        document.getElementById('state-label').textContent = checkedStates.size===0?'All states':checkedStates.size+' selected';
+        document.getElementById('state-label').textContent = checkedStates.size===0?L.all:checkedStates.size+L.sel;
 
         var filtered = allRecords.filter(function(r){return r.accident_year>=yMin && r.accident_year<=yMax;});
         if (checkedStates.size > 0) filtered = filtered.filter(function(r){return checkedStates.has(r.state_code);});
@@ -189,9 +206,9 @@ waitForPlotly(function() {
         Plotly.react('bar-chart', [{
             x:sortedBar.map(function(r){return r.claim_count;}), y:sortedBar.map(function(r){return r.state_code;}),
             type:'bar', orientation:'h',
-            marker:{ color:sortedBar.map(function(r){return r.avg_severity;}), colorscale:[[0,'#FEE2E2'],[0.5,'#EF4444'],[1,'#7F1D1D']], showscale:true, colorbar:{title:'Severity',thickness:10,outlinewidth:0,tickformat:',.0f'}, cornerradius:2 },
+            marker:{ color:sortedBar.map(function(r){return r.avg_severity;}), colorscale:[[0,'#FEE2E2'],[0.5,'#EF4444'],[1,'#7F1D1D']], showscale:true, colorbar:{title:L.sev,thickness:10,outlinewidth:0,tickformat:',.0f'}, cornerradius:2 },
             text:sortedBar.map(function(r){return r.claim_count.toLocaleString();}), textposition:'auto',
-            hovertemplate:'%{y}: %{x:,} claims<extra></extra>',
+            hovertemplate:L.barHover,
         }], { ...base, height:480, showlegend:false, xaxis:{...base.xaxis}, yaxis:{...base.yaxis, categoryorder:'total ascending'}, margin:{l:55,r:16,t:8,b:40} }, cfg);
 
         if (geoJsonData) {
@@ -202,7 +219,7 @@ waitForPlotly(function() {
                     featureidkey:'properties.name',
                     colorscale:[[0,'#EFF6FF'],[0.3,'#93C5FD'],[0.6,'#2563EB'],[1,'#1E3A8A']],
                     showscale:true, colorbar:{thickness:10,outlinewidth:0,tickformat:',.0f'},
-                    hovertemplate:'%{location}<br>Claims: %{z:,}<extra></extra>',
+                    hovertemplate:L.mapHover,
                 }], { ...base, height:480, geo:{fitbounds:'locations',visible:false,bgcolor:'rgba(0,0,0,0)'}, margin:{l:0,r:0,t:8,b:0} }, cfg);
                 document.getElementById('map-fallback').classList.add('hidden');
             } catch(e) { document.getElementById('map-fallback').classList.remove('hidden'); }
@@ -215,6 +232,7 @@ waitForPlotly(function() {
         }).join('');
     };
     applyGeoFilters();
+    document.addEventListener('langchange', applyGeoFilters);
 });
 </script>
 {% endif %}

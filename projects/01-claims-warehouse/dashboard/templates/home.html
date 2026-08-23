@@ -6,7 +6,9 @@
 {% block content %}
 {% if error %}
 <div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
-    Could not load KPI summary. {{ error }}
+    <span data-lang="en">Could not load KPI summary.</span>
+    <span data-lang="es" class="hidden">No se pudo cargar el resumen de KPIs.</span>
+    {{ error }}
 </div>
 {% endif %}
 
