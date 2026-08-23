@@ -137,10 +137,17 @@ script CI never calls, and it is **not** in P04's Terraform -- the modules are
 bigquery, cloud_run, gcs, iam, pubsub, scheduler, with no artifact_registry. So
 the CI pipeline depended on a one-off bootstrap nobody had written down.
 
-Both build jobs now create it idempotently before pushing. The durable fix is an
-`artifact_registry` module in P04 so the resource is declared where every other
-GCP resource in this platform is declared; until then, the workflow step is what
-stops a deleted registry from silently shipping nothing.
+Both build jobs create it idempotently before pushing, and the durable fix now
+exists too: `modules/artifact_registry` in P04, wired into the root module, with
+cleanup policies bounding storage growth and `prevent_destroy` set. The existing
+repository was **imported** into state rather than recreated --
+
+    terraform import module.artifact_registry.google_artifact_registry_repository.images \
+      projects/<PROJECT_ID>/locations/us-central1/repositories/data-pipelines
+
+-- so no image was lost. The CI ensure-step stays as belt and braces, because
+nothing applies Terraform automatically in this repo; `terraform fmt -check` is
+the only Terraform gate CI runs.
 
 Recreate by hand with:
 
@@ -148,6 +155,44 @@ Recreate by hand with:
 gcloud artifacts repositories create data-pipelines \
   --repository-format=docker --location=us-central1 --project <PROJECT_ID>
 ```
+
+### Deploys are canaries, not pushes
+
+`deploy-dashboard` ships each revision with `--no-traffic --tag=canary`, smoke-tests it on
+its tagged URL, and only then runs `update-traffic --to-latest`. If the smoke test fails,
+traffic was never moved: the previous revision is still serving, and the job reports that
+rather than rolling anything back, because there is nothing to roll back.
+
+Two exemptions in `dashboard/main.py` are load-bearing here, and removing either breaks
+every deploy *silently* rather than loudly:
+
+- **`/health` never redirects.** The smoke test addresses a revision directly and needs that
+  revision's own answer.
+- **Hostnames containing `---` never redirect.** That is Cloud Run's tagged-revision form,
+  `<tag>---<service>-<hash>.a.run.app`, and a service name cannot contain consecutive
+  hyphens, so the marker is unambiguous. Without this the canary URL would 301 to the
+  canonical host, so the smoke test would exercise *the revision being replaced*, pass, and
+  promote code nobody tested.
+
+Both are covered by tests confirmed to fail when the exemption is removed.
+
+The smoke test asserts content, not just status. A 200 proves nothing: on 2026-08-14 the
+dashboard served its shell perfectly while every panel reported `Not found: Table
+dev_claims_analytics.fct_claims`. It requires `BigQuery Connected` and the absence of any
+query-failure marker, then checks all five remaining routes.
+
+P02 deliberately does not get this. It is IAM-gated and internal, so smoke-testing it means
+minting an identity token per request -- real complexity around a surface no visitor
+reaches. It gets a revision-ready check instead.
+
+### The health check alerts, and closes itself
+
+`health-check.yml` runs daily rather than weekly, and files a GitHub issue on failure,
+reusing one open issue instead of filing one per run. A green run closes it, so an open
+`health-check` issue always means "broken right now". It asserts three things: the canonical
+host serves 200, the overview reports `BigQuery Connected` with no query errors, and the
+provider URL still 301s. The cadence change is deliberate; the reasoning is written into the
+workflow next to the cron.
 
 ### Maintenance rules
 
@@ -189,11 +234,15 @@ gcloud artifacts repositories create data-pipelines \
   next to it: `execute_sql_layer` returns partial results plus the list of files that
   failed, and `run_full_pipeline` is the outermost boundary that turns any failure into a
   reportable result. Narrowing either would change the contract the project is built on.
-- **What is still not linted at all:** CI runs ruff over `projects/0X/src/` only. The
-  dashboard under `projects/01-claims-warehouse/dashboard/` is the one public-facing
-  service in the repo and no lint job touches it. Four findings sit there, one of them the
-  minified PostHog loader line, which cannot be shortened and would need a per-file ignore.
-  Closing the gap also means a `ruff format` pass over `main.py`. Worth its own PR.
+- **The dashboard is linted and tested now.** It was the only public-facing service in the
+  repo with neither. The lint steps all targeted `src/` and it lives in `dashboard/`; the
+  E501 on the vendor-minified PostHog loader is handled by a per-file ignore in P01's
+  `pyproject.toml` rather than by mangling the JavaScript that ships. Its 16 tests cover the
+  canonical redirect and the `/ingest` proxy and touch neither the network nor GCP -- the
+  startup cache warm is stubbed and the upstream is faked. They live under a `pytest.ini` of
+  their own: without it pytest walks up to P01's `pyproject.toml`, whose `pythonpath =
+  ["src"]` puts the DuckDB pipeline's `main.py` ahead of the dashboard's, and `import main`
+  silently resolves to the wrong module.
 
 ## Conventions
 

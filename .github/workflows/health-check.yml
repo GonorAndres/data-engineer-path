@@ -2,12 +2,12 @@
 # Health Check -- Public Deployments
 # =============================================================================
 #
-# Pings public portfolio URLs on a schedule and fails if any return non-200.
-# Catches silent outages of portfolio-facing services (e.g. Cloud Run minimum
-# instances scaled to zero and the image was deleted, IAM drift, DNS issues).
+# Pings the public portfolio surface and fails if it is not serving correctly.
+# Catches silent outages: a deleted image, IAM drift, DNS problems, an emptied
+# BigQuery dataset, or a regressed redirect.
 #
 # Registry of checked URLs lives in /CLAUDE.md under "Deployment registry".
-# Only URLs marked "Public (unauthenticated)" should be added here.
+# Only URLs marked "Public" belong here; Internal ones are owner-only.
 #
 # =============================================================================
 
@@ -15,17 +15,30 @@ name: Health Check
 
 on:
   schedule:
-    # Every Monday at 09:00 UTC (03:00 CST). Weekly cadence is enough for a
-    # portfolio repo -- cron more frequently burns Actions minutes for no gain.
-    - cron: "0 9 * * 1"
+    # Daily at 09:00 UTC (03:00 CST).
+    #
+    # This was weekly until 2026-08-23, on the reasoning that a portfolio repo
+    # does not need more and that extra cron burns Actions minutes. Two things
+    # changed. The dashboard now answers on a custom domain with a 301 from the
+    # provider URLs, and every link published before that -- blog posts, the
+    # portfolio site, the CV -- depends on that redirect; a regression there is
+    # invisible rather than loud. And the warehouse has been emptied once
+    # already, on 2026-08-14, which the shell-renders-fine failure mode hides.
+    # A week of a dead portfolio link during a job search costs more than six
+    # extra runs of a job that takes ten seconds.
+    - cron: "0 9 * * *"
   workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write # opens an alert issue on failure; not in the default token scope
 
 jobs:
   check-public-urls:
     name: Check public URLs
     runs-on: ubuntu-latest
     steps:
-      - name: Claims Dashboard (P01)
+      - name: Claims Dashboard (P01) -- canonical host serves
         run: |
           URL="https://data-engineer.gonor.me"
           STATUS=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 "$URL")
@@ -35,12 +48,29 @@ jobs:
             exit 1
           fi
 
+      # A 200 is not proof the dashboard works. On 2026-08-14 it served its
+      # shell perfectly while every panel reported
+      # `Not found: Table dev_claims_analytics.fct_claims` -- the warehouse had
+      # been emptied and the app was fine. Only a content check sees that.
+      - name: Claims Dashboard (P01) -- warehouse still has data
+        run: |
+          BODY=$(curl -sS --max-time 60 "https://data-engineer.gonor.me/")
+          if ! printf '%s' "$BODY" | grep -q "BigQuery Connected"; then
+            echo "::error title=Warehouse unreachable::the dashboard is up but not reporting BigQuery Connected"
+            exit 1
+          fi
+          if printf '%s' "$BODY" | grep -qE "Could not load KPI|Not found: Table"; then
+            echo "::error title=Warehouse errors::the dashboard is rendering query failures"
+            exit 1
+          fi
+          echo "BigQuery Connected, no query errors on the overview."
+
       # The run.app hostnames stay reachable forever -- a Cloud Run domain
-      # mapping adds a route in, it never removes one.  Every link published
-      # before the custom domain existed (blog posts, the portfolio site, the
-      # CV) still points at them, so the 301 is what keeps those alive.  If it
-      # regresses, those links start splitting traffic again instead of dying
-      # loudly, which is exactly the kind of failure nobody notices.
+      # mapping adds a route in, it never removes one. Every link published
+      # before the custom domain existed still points at them, so the 301 is
+      # what keeps those alive. If it regresses, those links start splitting
+      # traffic again instead of dying loudly, which is the kind of failure
+      # nobody notices.
       - name: Claims Dashboard provider URL still redirects (P01)
         run: |
           URL="https://claims-dashboard-451451662791.us-central1.run.app/loss-triangle"
@@ -51,3 +81,89 @@ jobs:
             echo "::error title=Canonical redirect broken::expected 301 to https://data-engineer.gonor.me/loss-triangle, got $STATUS to $TARGET"
             exit 1
           fi
+
+  # A failed workflow is only an alert if somebody looks at it. This turns one
+  # into an issue, which notifies. It reuses a single open issue rather than
+  # filing one per run, so a sustained outage does not produce a daily pile.
+  alert:
+    name: Open an alert issue
+    runs-on: ubuntu-latest
+    needs: [check-public-urls]
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - name: File or update the alert
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Health check failing: the public dashboard is not serving correctly'
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            const body = [
+              'The scheduled health check failed.',
+              '',
+              `Run: ${run}`,
+              '',
+              'It asserts three things, and the run log says which gave way:',
+              '',
+              '- `https://data-engineer.gonor.me` returns 200',
+              '- the overview reports `BigQuery Connected` and renders no query errors',
+              '  (a 200 alone is not enough -- on 2026-08-14 the page served its shell',
+              '  perfectly while the warehouse behind it was empty)',
+              '- the `run.app` provider URL still 301s to the canonical host, which is',
+              '  what keeps every previously published link alive',
+              '',
+              'If the warehouse is empty, `CLAUDE.md` has the rebuild order under',
+              '"Rebuilding the claims warehouse (P01)". Load the raw layer first.',
+              '',
+              'This issue is reused by later failures rather than duplicated. It closes',
+              'itself on the next green run.',
+            ].join('\n')
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'health-check',
+            })
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `Still failing. Run: ${run}`,
+              })
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['health-check'],
+              })
+            }
+
+  # Closes the alert once the surface is healthy again, so an open
+  # `health-check` issue always means "broken right now".
+  resolve:
+    name: Close a stale alert
+    runs-on: ubuntu-latest
+    needs: [check-public-urls]
+    if: success()
+    permissions:
+      issues: write
+    steps:
+      - name: Close any open health-check issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'health-check',
+            })
+            for (const issue of open.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number,
+                body: 'Health check is green again. Closing.',
+              })
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: issue.number, state: 'closed',
+              })
+            }
