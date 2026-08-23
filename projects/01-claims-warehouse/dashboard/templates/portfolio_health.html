@@ -140,10 +140,10 @@ waitForPlotly(function() {
     var STR = {
         en: { claims: 'Claims', exposure: 'Exposure', lr: 'Loss Ratio', sev: 'Avg Severity',
               all: 'All coverages', none: 'None', sel: ' selected',
-              freq: 'Frequency', pp: 'Pure Premium (MXN)' },
+              freq: 'Frequency', pp: 'Pure Premium (MXN)', na: 'N/A' },
         es: { claims: 'Siniestros', exposure: 'Exposición', lr: 'Razón de Pérdida', sev: 'Severidad Promedio',
               all: 'Todas las coberturas', none: 'Ninguna', sel: ' seleccionadas',
-              freq: 'Frecuencia', pp: 'Prima Pura (MXN)' },
+              freq: 'Frecuencia', pp: 'Prima Pura (MXN)', na: 'N/D' },
     };
 
     var coverageList = document.getElementById('coverage-list');
@@ -174,6 +174,25 @@ waitForPlotly(function() {
         applyFilters();
     };
 
+    // Captions describe the labels, not the data, so they render on both
+    // branches -- writing them only after the zero-match early return is what
+    // left them stranded in the old language when the toggle happened with no
+    // rows matching. With no data the values fall back to '--', the same
+    // placeholder this page ships in its HTML, so a stale number from the
+    // previous selection can never pose as a current one.
+    function renderKpis(latest) {
+        var L = STR[window.currentLang] || STR.en;
+        var suffix = latest ? ' (' + latest.year + ')' : '';
+        document.getElementById('kpi-claims-label').textContent = L.claims + suffix;
+        document.getElementById('kpi-claims-value').textContent = latest ? latest.claims : '--';
+        document.getElementById('kpi-exposure-label').textContent = L.exposure + suffix;
+        document.getElementById('kpi-exposure-value').textContent = latest ? latest.exposure : '--';
+        document.getElementById('kpi-lr-label').textContent = L.lr + suffix;
+        document.getElementById('kpi-lr-value').textContent = latest ? latest.lr : '--';
+        document.getElementById('kpi-severity-label').textContent = L.sev + suffix;
+        document.getElementById('kpi-severity-value').textContent = latest ? latest.sev : '--';
+    }
+
     window.applyFilters = function() {
         var L = STR[window.currentLang] || STR.en;
         selectedCoverages = new Set();
@@ -190,7 +209,11 @@ waitForPlotly(function() {
             return selectedCoverages.has(r.coverage_type) && r.year >= yMin && r.year <= yMax;
         });
 
-        if (filtered.length === 0) { document.getElementById('no-data-warning').classList.remove('hidden'); return; }
+        if (filtered.length === 0) {
+            document.getElementById('no-data-warning').classList.remove('hidden');
+            renderKpis(null);
+            return;
+        }
         document.getElementById('no-data-warning').classList.add('hidden');
 
         var latestYear = Math.max.apply(null, filtered.map(function(r) { return r.year; }));
@@ -202,14 +225,13 @@ waitForPlotly(function() {
         var lr = totalEarned > 0 ? totalPaid / totalEarned : null;
         var sev = totalClaims > 0 ? totalPaid / totalClaims : null;
 
-        document.getElementById('kpi-claims-label').textContent = L.claims + ' (' + latestYear + ')';
-        document.getElementById('kpi-claims-value').textContent = totalClaims.toLocaleString();
-        document.getElementById('kpi-exposure-label').textContent = L.exposure + ' (' + latestYear + ')';
-        document.getElementById('kpi-exposure-value').textContent = totalExposure.toLocaleString(undefined, {maximumFractionDigits:1});
-        document.getElementById('kpi-lr-label').textContent = L.lr + ' (' + latestYear + ')';
-        document.getElementById('kpi-lr-value').textContent = lr !== null ? (lr * 100).toFixed(1) + '%' : 'N/A';
-        document.getElementById('kpi-severity-label').textContent = L.sev + ' (' + latestYear + ')';
-        document.getElementById('kpi-severity-value').textContent = sev !== null ? '$' + Math.round(sev).toLocaleString() : 'N/A';
+        renderKpis({
+            year: latestYear,
+            claims: totalClaims.toLocaleString(),
+            exposure: totalExposure.toLocaleString(undefined, {maximumFractionDigits:1}),
+            lr: lr !== null ? (lr * 100).toFixed(1) + '%' : L.na,
+            sev: sev !== null ? '$' + Math.round(sev).toLocaleString() : L.na,
+        });
 
         var P = window.DashboardPlotly, base = P.baseLayout, cfg = P.config, pal = P.palette;
         var byCov = {};

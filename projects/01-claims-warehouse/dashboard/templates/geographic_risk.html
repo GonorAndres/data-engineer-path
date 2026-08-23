@@ -192,7 +192,16 @@ waitForPlotly(function() {
         });
         var agg = Object.values(byState).map(function(s){return {...s, avg_severity: s.sev_n>0?s.sev_sum/s.sev_n:0};});
 
-        if (agg.length===0) { document.getElementById('geo-no-data').classList.remove('hidden'); return; }
+        if (agg.length===0) {
+            document.getElementById('geo-no-data').classList.remove('hidden');
+            // Same '--' the HTML ships: a stale count from the previous
+            // selection must not pose as a current one. Captions are static
+            // data-lang spans here, so the language never strands.
+            ['geo-kpi-states','geo-kpi-claims','geo-kpi-paid'].forEach(function(id) {
+                document.getElementById(id).textContent = '--';
+            });
+            return;
+        }
         document.getElementById('geo-no-data').classList.add('hidden');
 
         document.getElementById('geo-kpi-states').textContent = agg.length;
