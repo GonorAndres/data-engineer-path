@@ -35,7 +35,7 @@ def test_methodology_ships_both_languages(client):
     body = client.get("/methodology").text
     assert '<div data-lang="en">' in body
     assert '<div data-lang="es" class="hidden">' in body
-    assert "Cuatro Disciplinas, Una Tabla" in body
+    assert "La Regla de las Capas" in body
 
 
 def test_methodology_is_marked_active_in_the_nav(client):
