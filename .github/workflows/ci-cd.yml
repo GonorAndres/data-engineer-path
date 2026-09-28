@@ -49,7 +49,7 @@ env:
   PYTHON_VERSION: "3.12"
   GCP_REGION: us-central1
   # Matches the existing internal (IAM-auth) Cloud Run service in GCP.
-  # CLAUDE.md registry notes P02 is owner-only; keep the name stable here.
+  # AGENTS.md registry notes P02 is owner-only; keep the name stable here.
   SERVICE_NAME: dev-claims-elt-pipeline
   # Public Cloud Run service for the P01 Claims Analytics dashboard (FastAPI).
   DASHBOARD_SERVICE_NAME: claims-dashboard

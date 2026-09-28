@@ -6,7 +6,7 @@
 # Catches silent outages: a deleted image, IAM drift, DNS problems, an emptied
 # BigQuery dataset, or a regressed redirect.
 #
-# Registry of checked URLs lives in /CLAUDE.md under "Deployment registry".
+# Registry of checked URLs lives in /AGENTS.md under "Deployment registry".
 # Only URLs marked "Public" belong here; Internal ones are owner-only.
 #
 # =============================================================================
@@ -113,7 +113,7 @@ jobs:
               '- the `run.app` provider URL still 301s to the canonical host, which is',
               '  what keeps every previously published link alive',
               '',
-              'If the warehouse is empty, `CLAUDE.md` has the rebuild order under',
+              'If the warehouse is empty, `AGENTS.md` has the rebuild order under',
               '"Rebuilding the claims warehouse (P01)". Load the raw layer first.',
               '',
               'This issue is reused by later failures rather than duplicated. It closes',
