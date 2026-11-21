@@ -1,0 +1,335 @@
+version: 2
+
+models:
+  - name: dim_coverage
+    description: "Coverage dimension (line of business). One row per coverage type."
+    columns:
+      - name: coverage_key
+        description: "Surrogate key, row number ordered by coverage_type."
+        data_tests:
+          - unique
+          - not_null
+      - name: coverage_type
+        description: "Coverage type code. Natural key used by the facts."
+        data_tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["auto", "health", "home", "liability", "life"]
+      - name: coverage_category
+        description: "Coverage category."
+      - name: description
+        description: "Coverage description."
+  - name: dim_state
+    description: "State dimension. One row per distinct policyholder state code. There is no state name in the source data."
+    columns:
+      - name: state_key
+        description: "Surrogate key, row number ordered by state_code."
+        data_tests:
+          - unique
+          - not_null
+      - name: state_code
+        description: "State abbreviation. Natural key used by fct_claims."
+        data_tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["AGS", "BC", "BCS", "CAM", "CDMX", "CHIH", "CHIS", "COAH", "COL", "DGO", "GRO", "GTO", "HGO", "JAL", "MEX", "MICH", "MOR", "NAY", "NL", "OAX", "PUE", "QRO", "QROO", "SIN", "SLP", "SON", "TAB", "TAMS", "TLAX", "VER", "YUC", "ZAC"]
+  - name: dim_date
+    description: "Calendar dimension from 2019-01-01 to 2026-12-31. Fiscal year equals calendar year."
+    columns:
+      - name: date_key
+        description: "Date as an integer, YYYYMMDD."
+        data_tests:
+          - unique
+          - not_null
+      - name: full_date
+        description: "Calendar date."
+        data_tests:
+          - unique
+          - not_null
+      - name: year
+        description: "Calendar year."
+      - name: quarter
+        description: "Calendar quarter."
+      - name: month
+        description: "Month number."
+      - name: day
+        description: "Day of month."
+      - name: day_of_week
+        description: "1 = Sunday to 7 = Saturday."
+      - name: day_name
+        description: "English day name."
+      - name: month_name
+        description: "English month name."
+      - name: iso_week
+        description: "ISO week number."
+      - name: is_weekend
+        description: "True on Saturday and Sunday."
+      - name: is_month_end
+        description: "True on the last day of the month."
+      - name: is_quarter_end
+        description: "True on the last day of March, June, September, December."
+      - name: is_year_end
+        description: "True on 31 December."
+      - name: fiscal_year
+        description: "Fiscal year (same as calendar year)."
+      - name: fiscal_quarter
+        description: "Fiscal quarter (same as calendar quarter)."
+      - name: year_quarter_label
+        description: "Label such as 2024-Q3."
+  - name: dim_policyholder
+    description: "Policyholder dimension. The policyholder is the insured. One row per policyholder."
+    columns:
+      - name: policyholder_id
+        description: "Policyholder identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Given name."
+      - name: last_name
+        description: "Family name."
+      - name: full_name
+        description: "first_name and last_name joined by a space."
+      - name: date_of_birth
+        description: "Date of birth."
+      - name: age_at_registration
+        description: "Years between date_of_birth and registration_date, counted as calendar-year boundaries crossed."
+      - name: current_age
+        description: "Years between date_of_birth and the valuation date, counted as calendar-year boundaries crossed."
+      - name: gender
+        description: "Gender code."
+      - name: state_code
+        description: "State code."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_state')
+                field: state_code
+      - name: city
+        description: "City."
+      - name: occupation
+        description: "Occupation."
+      - name: registration_date
+        description: "Registration date."
+  - name: dim_policy
+    description: "Policy dimension with coverage details. One row per policy."
+    columns:
+      - name: policy_id
+        description: "Policy identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: policyholder_id
+        description: "Policyholder (insured)."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_policyholder')
+                field: policyholder_id
+      - name: policy_number
+        description: "Policy number."
+      - name: coverage_type
+        description: "Coverage type."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_coverage')
+                field: coverage_type
+      - name: coverage_category
+        description: "Coverage category."
+      - name: coverage_description
+        description: "Coverage description."
+      - name: effective_date
+        description: "Effective date."
+      - name: expiration_date
+        description: "Expiration date."
+      - name: policy_term_days
+        description: "Policy term in days."
+      - name: annual_premium
+        description: "Annual premium."
+      - name: deductible
+        description: "Deductible."
+      - name: coverage_limit
+        description: "Coverage limit."
+      - name: status
+        description: "Policy status."
+      - name: policy_year
+        description: "Year of effective_date."
+      - name: is_currently_active
+        description: "True when status is active and the valuation date falls inside the policy period."
+  - name: fct_claims
+    description: "Claims fact. One row per claim, with payment totals, incurred amount and keys to the dimensions."
+    columns:
+      - name: claim_id
+        description: "Claim identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: policy_id
+        description: "Policy."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_policy')
+                field: policy_id
+      - name: policyholder_id
+        description: "Policyholder (insured)."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_policyholder')
+                field: policyholder_id
+      - name: claim_number
+        description: "Claim number."
+      - name: accident_date_key
+        description: "YYYYMMDD key of accident_date."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: report_date_key
+        description: "YYYYMMDD key of report_date."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: accident_date
+        description: "Date of loss."
+        data_tests:
+          - not_null
+      - name: report_date
+        description: "Report date."
+      - name: close_date
+        description: "Close date."
+      - name: claim_status
+        description: "Claim status."
+      - name: cause_of_loss
+        description: "Cause of loss."
+      - name: coverage_type
+        description: "Coverage type (line of business)."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_coverage')
+                field: coverage_type
+      - name: coverage_category
+        description: "Coverage category."
+      - name: state_code
+        description: "Policyholder state code."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_state')
+                field: state_code
+      - name: accident_year
+        description: "Accident year."
+      - name: accident_quarter
+        description: "Accident quarter."
+      - name: report_delay_days
+        description: "Days from accident to report."
+      - name: development_months_at_valuation
+        description: "Months from accident to valuation date."
+      - name: is_large_loss
+        description: "True when initial_reserve is above 200000."
+      - name: annual_premium
+        description: "Annual premium of the policy."
+      - name: deductible
+        description: "Policy deductible."
+      - name: coverage_limit
+        description: "Policy coverage limit."
+      - name: initial_reserve
+        description: "Initial case reserve."
+      - name: current_reserve
+        description: "Current case reserve."
+      - name: total_indemnity
+        description: "Sum of indemnity payments."
+        data_tests:
+          - non_negative
+      - name: total_expense
+        description: "Sum of expense payments."
+        data_tests:
+          - non_negative
+      - name: total_recovery
+        description: "Sum of recovery payments (zero or negative)."
+      - name: total_paid
+        description: "Sum of all payments, recoveries included."
+      - name: payment_count
+        description: "Number of payments."
+      - name: first_payment_date
+        description: "Date of first payment."
+      - name: last_payment_date
+        description: "Date of last payment."
+      - name: incurred_amount
+        description: "total_paid plus current_reserve."
+      - name: net_paid
+        description: "Same as total_paid."
+  - name: fct_claim_payments
+    description: "Claim payments fact with development context for loss triangles. One row per payment."
+    columns:
+      - name: payment_id
+        description: "Payment identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: claim_id
+        description: "Claim."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_claims')
+                field: claim_id
+      - name: payment_date_key
+        description: "YYYYMMDD key of payment_date."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: accident_date_key
+        description: "YYYYMMDD key of accident_date."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: payment_date
+        description: "Payment date."
+      - name: accident_date
+        description: "Accident date."
+      - name: development_year
+        description: "Payment year minus accident year."
+        data_tests:
+          - development_year_non_negative
+      - name: development_months
+        description: "Months from accident month to payment month."
+      - name: accident_year
+        description: "Accident year."
+      - name: payment_amount
+        description: "Payment amount; negative for recoveries."
+        data_tests:
+          - non_negative:
+              config:
+                where: "payment_type != 'recovery'"
+      - name: payment_type
+        description: "indemnity, expense or recovery."
+      - name: cumulative_paid
+        description: "Running total paid for the claim."
+      - name: payment_rank
+        description: "Order of the payment within the claim."
+      - name: coverage_type
+        description: "Coverage type."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_coverage')
+                field: coverage_type
+      - name: claim_status
+        description: "Claim status."

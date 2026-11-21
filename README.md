@@ -121,6 +121,28 @@ graph LR
 
 These are not 6 isolated projects -- they form one integrated insurance data platform where each project builds on the previous ones.
 
+## dbt + DuckDB / Snowflake
+
+New here? [The Claims Pipeline, Explained End to End](docs/architecture/claims-pipeline-explained.md) walks through every stage, why it exists, which engine runs it today, and the real insurance questions it answers.
+
+[`dbt_claims/`](dbt_claims/) is the P01 warehouse ported from Dataform to dbt: same models, same names, same numbers (reconciled against BigQuery: 608 claims, 26,944,733.19 paid, 738 exposure rows). It runs on DuckDB, a database that lives in a single local file, so it needs no cloud account; the same project targets Snowflake by switching the dbt profile.
+
+```bash
+cd dbt_claims && pip install -r requirements.txt
+dbt build --profiles-dir .            # seeds, snapshot, models, tests on DuckDB
+dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
+```
+
+- **Layers:** seeds (raw CSVs) -> `stg_` -> `int_` -> marts (`fct_claims`, `fct_claim_payments`, `dim_policy`, `dim_policyholder`, `dim_coverage`, `dim_state`, `dim_date`) -> reports (`rpt_loss_triangle`, `rpt_claim_frequency`) -> `kpi_portfolio`.
+- **History:** `snap_policies` is a dbt snapshot (SCD Type 2: a changed row is closed and a new version added). With the static sample data it holds one version per policy.
+- **KPIs:** claim frequency, severity, loss ratio and pure premium are each defined once in `macros/kpis.sql` and reused at every grain.
+- **Tests:** 88 -- unique/not-null keys, fact-to-dimension relationships, accepted values for line of business and state, non-negative paid amounts, development year >= 0, and the three Dataform assertions. Source freshness is configured as warn-only, since the sample data never changes.
+- **Engine portability:** dbt's cross-database macros first; the remaining differences live in `adapter.dispatch` macros (one implementation per engine).
+- **CI:** [`dbt.yml`](.github/workflows/dbt.yml) lints with sqlfluff, runs `dbt build` on DuckDB on every PR and push to `main`, checks the Airflow DAG parses, and publishes the docs site from `main`. [`dbt-snowflake.yml`](.github/workflows/dbt-snowflake.yml) is a manual run that skips unless the `SNOWFLAKE_*` secrets exist.
+- **Orchestration:** [`airflow/dags/claims_dbt.py`](airflow/dags/claims_dbt.py) runs seed -> snapshot -> run -> test with BashOperator. It is the open-source counterpart to the Dagster pipeline in P02, which stays as it is.
+- **Docs and lineage:** https://gonorandres.github.io/data-engineer-path/
+- **Snowflake status:** the profile parses, but the project has not been run against a real Snowflake account yet.
+
 ## Knowledge Base
 
 The `docs/` folder is an Obsidian vault with decision-oriented documentation:

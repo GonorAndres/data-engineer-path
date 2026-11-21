@@ -1,0 +1,162 @@
+version: 2
+
+models:
+  - name: stg_claims
+    description: "Cleaned claims. One row per claim, with report delay and accident period."
+    columns:
+      - name: claim_id
+        description: "Claim identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: policy_id
+        description: "Policy the claim was made against."
+        data_tests:
+          - not_null
+      - name: claim_number
+        description: "Trimmed claim number."
+      - name: accident_date
+        description: "Date of loss."
+        data_tests:
+          - not_null
+      - name: report_date
+        description: "Date the claim was reported."
+        data_tests:
+          - not_null
+      - name: close_date
+        description: "Date the claim was closed; null while open."
+      - name: claim_status
+        description: "Lower-cased claim status."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["open", "closed", "reopened", "denied"]
+      - name: cause_of_loss
+        description: "Lower-cased cause of loss."
+      - name: initial_reserve
+        description: "Initial case reserve."
+      - name: current_reserve
+        description: "Current outstanding case reserve."
+      - name: report_delay_days
+        description: "Days between accident_date and report_date."
+      - name: accident_year
+        description: "Calendar year of accident_date."
+      - name: accident_quarter
+        description: "Calendar quarter (1-4) of accident_date."
+  - name: stg_claim_payments
+    description: "Cleaned claim payments. One row per payment."
+    columns:
+      - name: payment_id
+        description: "Payment identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: claim_id
+        description: "Claim the payment belongs to."
+        data_tests:
+          - not_null
+      - name: payment_date
+        description: "Date of the payment."
+        data_tests:
+          - not_null
+      - name: payment_amount
+        description: "Amount paid; negative for recoveries."
+        data_tests:
+          - not_null
+      - name: payment_type
+        description: "Lower-cased payment type."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["indemnity", "expense", "recovery"]
+      - name: cumulative_paid
+        description: "Running total as supplied by the source (the recomputed one is in int_claim_payments_cumulative)."
+  - name: stg_coverages
+    description: "Coverage reference data, one row per coverage type."
+    columns:
+      - name: coverage_type
+        description: "Coverage type code (the line of business)."
+        data_tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["auto", "health", "home", "liability", "life"]
+      - name: coverage_category
+        description: "Category of the coverage."
+      - name: description
+        description: "Description of the coverage."
+  - name: stg_policies
+    description: "Cleaned policies with computed term. One row per policy. Rows with effective_date on or after expiration_date are dropped."
+    columns:
+      - name: policy_id
+        description: "Policy identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: policyholder_id
+        description: "Policyholder (insured) who owns the policy."
+        data_tests:
+          - not_null
+      - name: policy_number
+        description: "Trimmed policy number."
+      - name: coverage_type
+        description: "Coverage type (line of business)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["auto", "health", "home", "liability", "life"]
+      - name: effective_date
+        description: "First day of cover."
+        data_tests:
+          - not_null
+      - name: expiration_date
+        description: "End of cover."
+      - name: annual_premium
+        description: "Annual premium for the term."
+      - name: deductible
+        description: "Deductible amount."
+      - name: coverage_limit
+        description: "Maximum covered amount."
+      - name: status
+        description: "Lower-cased policy status."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["active", "renewed", "expired", "cancelled"]
+      - name: policy_term_days
+        description: "Days between effective_date and expiration_date."
+  - name: stg_policyholders
+    description: "Cleaned policyholders (the insured). One row per policyholder."
+    columns:
+      - name: policyholder_id
+        description: "Policyholder identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: "Given name."
+        data_tests:
+          - not_null
+      - name: last_name
+        description: "Family name."
+        data_tests:
+          - not_null
+      - name: date_of_birth
+        description: "Date of birth."
+      - name: gender
+        description: "Upper-cased gender code."
+      - name: state_code
+        description: "Upper-cased state abbreviation."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["AGS", "BC", "BCS", "CAM", "CDMX", "CHIH", "CHIS", "COAH", "COL", "DGO", "GRO", "GTO", "HGO", "JAL", "MEX", "MICH", "MOR", "NAY", "NL", "OAX", "PUE", "QRO", "QROO", "SIN", "SLP", "SON", "TAB", "TAMS", "TLAX", "VER", "YUC", "ZAC"]
+      - name: city
+        description: "City of residence."
+      - name: occupation
+        description: "Lower-cased occupation."
+      - name: registration_date
+        description: "Date the policyholder was registered."

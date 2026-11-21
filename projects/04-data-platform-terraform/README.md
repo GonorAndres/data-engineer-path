@@ -141,7 +141,7 @@ make destroy
 ├── terraform.tfvars.example        # Example variable values
 └── modules/
     ├── bigquery/                   # BigQuery datasets with env prefix
-    │   ├── main.tf                 #   5 datasets, access controls, expiration
+    │   ├── main.tf                 #   5 datasets, access controls
     │   ├── variables.tf
     │   └── outputs.tf
     ├── gcs/                        # GCS buckets with lifecycle rules
@@ -195,7 +195,7 @@ make destroy
 
 | Resource | Dev Cost | Prod Cost | Notes |
 |----------|---------|-----------|-------|
-| BigQuery datasets | $0 (empty) | $0.02/GB stored | First 10 GB free; dev tables expire after 30 days |
+| BigQuery datasets | $0 (empty) | $0.02/GB stored | First 10 GB free; no table expiry (a 30-day dev expiry once deleted the live warehouse) |
 | GCS buckets | $0.02/GB | $0.02/GB | Lifecycle rules auto-delete test data |
 | Pub/Sub | $0 | $0.04/GB messages | First 10 GB free |
 | Cloud Run | $0 (scale to zero) | ~$0.01/run | Max 1 instance, min 0; pay only during execution |

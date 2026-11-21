@@ -609,7 +609,7 @@ jobs:
             echo "::error title=Canary has no data::overview did not report BigQuery Connected"
             exit 1
           fi
-          if printf '%s' "$BODY" | grep -qE "Could not load KPI|Not found: Table"; then
+          if printf '%s' "$BODY" | grep -qE "data-warehouse-state|Could not load KPI|Not found: Table"; then
             echo "::error title=Canary rendering errors::overview reported a query failure"
             exit 1
           fi

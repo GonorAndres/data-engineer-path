@@ -57,3 +57,6 @@ to-do.md
 
 # Tool artifacts
 .playwright-mcp/
+
+# dbt seeds are the warehouse input, small and synthetic -- same reason as sample_data.
+!dbt_claims/seeds/*.csv

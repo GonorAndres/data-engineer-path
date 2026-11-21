@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "True streaming claims pipeline with watermarks, triggers, late data, and accumulating mode"
 requires-python = ">=3.10"
 dependencies = [
-    "apache-beam[gcp]>=2.56.0",
+    # Capped: 2.78.0 infers DoFn input types from TimestampedValue/TaggedOutput
+    # yields and rejects 17 of these tests with TypeCheckError at construction.
+    # Raise the cap only after the suite passes on the new release.
+    "apache-beam[gcp]>=2.56.0,<2.78",
     "google-cloud-pubsub>=2.21.0",
     "google-cloud-bigquery>=3.20.0",
     "google-cloud-bigquery-storage>=2.24.0",

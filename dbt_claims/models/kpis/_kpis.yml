@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: kpi_portfolio
+    description: "Portfolio KPIs (frequency, severity, pure premium, loss ratio) at four grains: overall, by coverage_type, by accident_year, by state_code. Dimension columns not in the grain are null. Formulas live in macros/kpis.sql."
+    columns:
+      - name: grain
+        description: "Which roll-up the row belongs to."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["overall", "coverage_type", "accident_year", "state_code"]
+      - name: accident_year
+        description: "Accident year, when in the grain."
+      - name: coverage_type
+        description: "Coverage type, when in the grain."
+      - name: state_code
+        description: "State code, when in the grain."
+      - name: policy_count
+        description: "Policies with exposure."
+      - name: claim_count
+        description: "Number of claims."
+      - name: exposure_years
+        description: "Exposure in years."
+      - name: earned_premium
+        description: "Earned premium."
+      - name: total_paid
+        description: "Total paid."
+      - name: total_incurred
+        description: "Paid plus case reserves."
+      - name: claim_frequency
+        description: "claim_count / exposure_years."
+      - name: severity
+        description: "total_paid / claim_count."
+      - name: pure_premium
+        description: "total_incurred / exposure_years."
+      - name: loss_ratio
+        description: "total_incurred / earned_premium."

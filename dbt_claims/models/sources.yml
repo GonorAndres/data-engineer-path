@@ -1,0 +1,57 @@
+version: 2
+
+# Why both seeds and sources?
+# Staging models select from ref('raw_*') (the seeds), NOT from source(). A
+# source() call creates no dependency on the seed node, so `dbt build` on an
+# empty database would try to read tables that had not been loaded yet.
+# This file declares the same tables as source 'raw' for one purpose only:
+# `dbt source freshness`. Freshness is not part of `dbt build`.
+#
+# The data is a static synthetic extract, so freshness WILL warn. Only
+# warn_after is set (no error_after), so it can never fail anything.
+sources:
+  - name: raw
+    description: "Raw tables loaded from the seed CSVs. Same relations as the raw_* seeds."
+    schema: "{{ target.schema }}"
+    tables:
+      - name: raw_claims
+        description: "Raw claims. Freshness measured on report_date."
+        config:
+          loaded_at_field: "cast(report_date as timestamp)"
+          freshness:
+            warn_after: {count: 1, period: day}
+        columns:
+          - name: claim_id
+            description: "Claim identifier."
+      - name: raw_policies
+        description: "Raw policies. Freshness measured on effective_date."
+        config:
+          loaded_at_field: "cast(effective_date as timestamp)"
+          freshness:
+            warn_after: {count: 1, period: day}
+        columns:
+          - name: policy_id
+            description: "Policy identifier."
+      - name: raw_policyholders
+        description: "Raw policyholders. Freshness measured on registration_date."
+        config:
+          loaded_at_field: "cast(registration_date as timestamp)"
+          freshness:
+            warn_after: {count: 1, period: day}
+        columns:
+          - name: policyholder_id
+            description: "Policyholder identifier."
+      - name: raw_claim_payments
+        description: "Raw claim payments. Freshness measured on payment_date."
+        config:
+          loaded_at_field: "cast(payment_date as timestamp)"
+          freshness:
+            warn_after: {count: 1, period: day}
+        columns:
+          - name: payment_id
+            description: "Payment identifier."
+      - name: raw_coverages
+        description: "Coverage reference data. No date column, so no freshness check."
+        columns:
+          - name: coverage_type
+            description: "Coverage type code."

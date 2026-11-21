@@ -1,0 +1,65 @@
+# =============================================================================
+# dbt on Snowflake (manual, optional)
+# =============================================================================
+# Runs the same dbt project against Snowflake using the `snowflake` target in
+# dbt_claims/profiles.yml, which reads every connection field from env vars.
+#
+# Manual only. If the SNOWFLAKE_* repository secrets are not set, the job
+# reports that and stops green instead of failing, so the workflow can live in
+# the repo before any Snowflake account exists.
+#
+# Required secrets: SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD,
+# SNOWFLAKE_ROLE, SNOWFLAKE_WAREHOUSE, SNOWFLAKE_DATABASE.
+# Optional: SNOWFLAKE_SCHEMA (defaults to CLAIMS in profiles.yml).
+# =============================================================================
+name: dbt-snowflake
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: dbt_claims
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_claims
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+      SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+      SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+      SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+      SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
+      SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA || 'CLAIMS' }}
+    steps:
+      - name: Check Snowflake secrets
+        id: secrets
+        working-directory: .
+        run: |
+          missing=""
+          for v in SNOWFLAKE_ACCOUNT SNOWFLAKE_USER SNOWFLAKE_PASSWORD SNOWFLAKE_ROLE SNOWFLAKE_WAREHOUSE SNOWFLAKE_DATABASE; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=Snowflake not configured::missing secrets:$missing -- skipping"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@v4
+      - if: steps.secrets.outputs.ready == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: steps.secrets.outputs.ready == 'true'
+        run: pip install -r requirements-snowflake.txt
+      - if: steps.secrets.outputs.ready == 'true'
+        run: dbt deps
+      - if: steps.secrets.outputs.ready == 'true'
+        run: dbt build --target snowflake

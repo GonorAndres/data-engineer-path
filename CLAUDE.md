@@ -117,6 +117,17 @@ Two IAM facts the API errors do not make obvious:
 `--dry-run` is not write-free. It still uploads the local `dataform/` tree into
 `deploy-workspace` and compiles; it skips only the BigQuery execution.
 
+**Why the tables vanish: dataset-level table expiry.** It happened twice. P04's
+Terraform gave every `dev_` dataset a 30-day `default_table_expiration_ms`, and
+BigQuery stamps that expiry on each table when it is created -- so a rebuild only
+re-arms the timer. The 2026-08-14 rebuild expired on 2026-09-13 (first
+`fct_claims was not found` job in `INFORMATION_SCHEMA.JOBS` that morning) and the
+dashboard stayed broken until 2026-11-21. Expiry is now off on all six datasets
+(`bq update --default_table_expiration 0`), opt-in in the Terraform module, and
+`setup_gcp.sh` clears it unconditionally. If tables disappear again, check
+`bq show --format=prettyjson <dataset> | grep -i expiration` first, and clear the
+expiry **before** rebuilding.
+
 A healthy rebuild produces 16 tables across staging, intermediate, analytics and reports
 with every assertion passing. Cost is negligible -- 281 KiB of source CSV, loads unbilled,
 queries far inside the free tier, with `max_bytes_billed` capped at 10 GiB per query.

@@ -31,3 +31,13 @@ variable "pipeline_service_account_email" {
   description = "Email of the pipeline service account (granted WRITER access)"
   type        = string
 }
+
+variable "default_table_expiration_ms" {
+  description = <<-EOT
+    Default table lifetime in ms for every dataset, or null for no expiry.
+    Leave null for any dataset a live service reads: expiry silently deletes
+    each table that long after the run that created it.
+  EOT
+  type        = number
+  default     = null
+}
