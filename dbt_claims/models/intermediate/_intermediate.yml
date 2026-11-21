@@ -1,0 +1,156 @@
+version: 2
+
+models:
+  - name: int_claim_payments_cumulative
+    description: "Payments joined to their claim and policy, with development year/months, a recomputed running total per claim, and a payment rank."
+    columns:
+      - name: payment_id
+        description: "Payment identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: claim_id
+        description: "Claim identifier."
+        data_tests:
+          - not_null
+      - name: payment_date
+        description: "Payment date."
+      - name: payment_amount
+        description: "Payment amount; negative for recoveries."
+      - name: payment_type
+        description: "Payment type."
+      - name: accident_date
+        description: "Accident date of the claim."
+      - name: accident_year
+        description: "Accident year of the claim."
+      - name: coverage_type
+        description: "Coverage type of the policy."
+      - name: claim_status
+        description: "Claim status."
+      - name: development_year
+        description: "Payment year minus accident year."
+        data_tests:
+          - development_year_non_negative
+      - name: development_months
+        description: "Whole calendar months from accident month to payment month."
+      - name: cumulative_paid
+        description: "Running total of payment_amount per claim, ordered by payment_date then payment_id."
+      - name: payment_rank
+        description: "Order of the payment within its claim, starting at 1."
+  - name: int_claims_enriched
+    description: "Claims joined to policy, coverage and policyholder state. One row per claim."
+    columns:
+      - name: claim_id
+        description: "Claim identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: policy_id
+        description: "Policy identifier."
+        data_tests:
+          - not_null
+      - name: claim_number
+        description: "Claim number."
+      - name: accident_date
+        description: "Date of loss."
+      - name: report_date
+        description: "Report date."
+      - name: close_date
+        description: "Close date; null while open."
+      - name: claim_status
+        description: "Claim status."
+      - name: cause_of_loss
+        description: "Cause of loss."
+      - name: initial_reserve
+        description: "Initial case reserve."
+      - name: current_reserve
+        description: "Current case reserve."
+      - name: report_delay_days
+        description: "Days from accident to report."
+      - name: accident_year
+        description: "Accident year."
+      - name: accident_quarter
+        description: "Accident quarter."
+      - name: policyholder_id
+        description: "Policyholder (insured) of the policy."
+      - name: policy_number
+        description: "Policy number."
+      - name: coverage_type
+        description: "Coverage type (line of business)."
+      - name: policy_effective_date
+        description: "Policy effective date."
+      - name: policy_expiration_date
+        description: "Policy expiration date."
+      - name: annual_premium
+        description: "Policy annual premium."
+      - name: deductible
+        description: "Policy deductible."
+      - name: coverage_limit
+        description: "Policy coverage limit."
+      - name: policy_status
+        description: "Policy status."
+      - name: coverage_category
+        description: "Category from the coverage reference table."
+      - name: coverage_description
+        description: "Description from the coverage reference table."
+      - name: state_code
+        description: "State code of the policyholder. Added in the dbt port."
+      - name: development_months_at_valuation
+        description: "Whole calendar months from accident month to the valuation date (var valuation_date)."
+      - name: is_large_loss
+        description: "True when initial_reserve is above 200000."
+  - name: int_policy_exposure
+    description: "Policy exposure clipped to the observation window (observation_start to valuation_date). Cancelled policies and policies with no exposure are excluded."
+    columns:
+      - name: policy_id
+        description: "Policy identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: policyholder_id
+        description: "Policyholder (insured)."
+      - name: policy_number
+        description: "Policy number."
+      - name: coverage_type
+        description: "Coverage type."
+      - name: effective_date
+        description: "Policy effective date."
+      - name: expiration_date
+        description: "Policy expiration date."
+      - name: annual_premium
+        description: "Annual premium."
+      - name: status
+        description: "Policy status."
+      - name: exposure_start
+        description: "Later of effective_date and observation_start."
+      - name: exposure_end
+        description: "Earlier of expiration_date and valuation_date."
+      - name: exposure_days
+        description: "Days between exposure_start and exposure_end."
+      - name: exposure_years
+        description: "exposure_days / 365.25."
+      - name: earned_premium
+        description: "annual_premium pro-rated by exposure_days / policy term days, rounded to 2 decimals."
+      - name: exposure_year
+        description: "Calendar year of exposure_start. All of a policy exposure is assigned to this year, as in the Dataform model."
+  - name: int_kpi_base
+    description: "Additive claim and exposure measures at accident year x coverage type x state. Feeds kpi_portfolio."
+    columns:
+      - name: accident_year
+        description: "Accident year (claims) or exposure year (exposure)."
+      - name: coverage_type
+        description: "Coverage type."
+      - name: state_code
+        description: "Policyholder state code."
+      - name: policy_count
+        description: "Policies with exposure."
+      - name: claim_count
+        description: "Number of claims."
+      - name: exposure_years
+        description: "Sum of exposure years."
+      - name: earned_premium
+        description: "Sum of earned premium."
+      - name: total_paid
+        description: "Sum of total_paid from fct_claims."
+      - name: total_incurred
+        description: "Sum of incurred_amount from fct_claims."

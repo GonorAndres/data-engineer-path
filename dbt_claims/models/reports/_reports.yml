@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: rpt_claim_frequency
+    description: "Claim frequency, severity, pure premium and loss ratio by year and coverage type."
+    columns:
+      - name: year
+        description: "Accident year (claims) or exposure year (exposure)."
+        data_tests:
+          - not_null
+      - name: coverage_type
+        description: "Coverage type."
+        data_tests:
+          - not_null
+      - name: policy_count
+        description: "Policies with exposure."
+      - name: exposure_years
+        description: "Exposure in years."
+      - name: earned_premium
+        description: "Earned premium."
+      - name: claim_count
+        description: "Number of claims."
+      - name: total_paid
+        description: "Total paid."
+      - name: avg_severity
+        description: "total_paid / claim_count; 0 when there are no claims."
+      - name: total_incurred
+        description: "Paid plus case reserves."
+      - name: claim_frequency
+        description: "claim_count / exposure_years, 4 decimals."
+      - name: pure_premium
+        description: "total_incurred / exposure_years, 2 decimals."
+      - name: loss_ratio
+        description: "total_incurred / earned_premium, 4 decimals."
+  - name: rpt_loss_triangle
+    description: "Loss development triangle: cumulative paid by accident year and development year."
+    columns:
+      - name: accident_year
+        description: "Accident year."
+        data_tests:
+          - unique
+          - not_null
+      - name: dev_year_0
+        description: "Cumulative paid at development year 0."
+      - name: dev_year_1
+        description: "Cumulative paid at development year 1."
+      - name: dev_year_2
+        description: "Cumulative paid at development year 2."
+      - name: dev_year_3
+        description: "Cumulative paid at development year 3."
+      - name: dev_year_4
+        description: "Cumulative paid at development year 4."
+      - name: dev_year_5
+        description: "Cumulative paid at development year 5."
+      - name: latest_cumulative
+        description: "Largest cumulative paid across development years."
+      - name: claim_count
+        description: "Distinct claims with payments."

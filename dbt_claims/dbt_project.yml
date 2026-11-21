@@ -1,0 +1,31 @@
+name: claims
+version: "1.0.0"
+config-version: 2
+profile: claims
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+analysis-paths: ["analyses"]
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Same values as dataform/dataform.json (valuation_date) and the hard-coded
+  # observation window start in int_policy_exposure.
+  valuation_date: "2025-12-31"
+  observation_start: "2020-01-01"
+
+models:
+  claims:
+    staging:
+      +materialized: table
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table
+    reports:
+      +materialized: table
+    kpis:
+      +materialized: table
