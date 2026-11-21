@@ -21,13 +21,7 @@
     esos costos finales y constituir reservas.
 </p>
 
-{% if error %}
-<div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800">
-    <span data-lang="en">Could not load loss triangle.</span>
-    <span data-lang="es" class="hidden">No se pudo cargar el triángulo de pérdidas.</span>
-    {{ error }}
-</div>
-{% endif %}
+{% if error %}{% include "_warehouse_state.html" %}{% endif %}
 
 {% if chart_data %}
 <div class="chart-card mb-5">

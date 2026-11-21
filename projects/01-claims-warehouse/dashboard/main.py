@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from google.api_core import exceptions as gcp_exceptions
 from starlette.middleware.gzip import GZipMiddleware
 from utils.analytics import CANONICAL_HOST, POSTHOG_SNIPPET
 from utils.bq_client import DATASET_ANALYTICS, DATASET_REPORTS, query_bq
@@ -108,6 +109,25 @@ def _clean(obj):
     if isinstance(obj, (list, tuple)):
         return [_clean(v) for v in obj]
     return obj
+
+
+def _warehouse_error(exc: Exception, page: str) -> str:
+    """Log a failed warehouse query and return a state name for the template.
+
+    The raw BigQuery message never reaches the page: it names the project and
+    dataset and tells a visitor nothing useful. The full exception goes to the
+    logs instead, where the owner can act on it.
+
+    `refreshing` covers NotFound -- a table that is missing because the
+    warehouse is being rebuilt (or expired, as on 2026-09-13). Anything else is
+    `unavailable`. Both render a `data-warehouse-state` marker that the canary
+    smoke test and health-check.yml treat as a failure, so a polite message
+    can never turn a broken warehouse green.
+    """
+    log.error("Warehouse query failed on %s", page, exc_info=exc)
+    if isinstance(exc, gcp_exceptions.NotFound):
+        return "refreshing"
+    return "unavailable"
 
 
 def _ctx(active_page: str, **extra):
@@ -248,7 +268,7 @@ async def home(request: Request):
             "unique_policyholders": int(row["unique_policyholders"]),
         }
     except Exception as exc:
-        error = str(exc)
+        error = _warehouse_error(exc, "home")
 
     return templates.TemplateResponse(
         request, "home.html", context=_ctx("home", kpis=kpis, error=error)
@@ -325,7 +345,7 @@ async def loss_triangle(request: Request):
         })
 
     except Exception as exc:
-        error = str(exc)
+        error = _warehouse_error(exc, "loss_triangle")
 
     return templates.TemplateResponse(
         request, "loss_triangle.html",
@@ -355,7 +375,7 @@ async def portfolio_health(request: Request):
             "columns": df.columns.tolist(),
         })
     except Exception as exc:
-        error = str(exc)
+        error = _warehouse_error(exc, "portfolio_health")
 
     return templates.TemplateResponse(
         request, "portfolio_health.html",
@@ -501,7 +521,7 @@ async def geographic_risk(request: Request):
             "state_names": STATE_NAMES,
         })
     except Exception as exc:
-        error = str(exc)
+        error = _warehouse_error(exc, "geographic_risk")
 
     return templates.TemplateResponse(
         request, "geographic_risk.html",

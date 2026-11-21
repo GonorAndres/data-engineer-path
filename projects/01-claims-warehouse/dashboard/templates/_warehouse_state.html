@@ -1,0 +1,25 @@
+{# Shown in place of a page's charts when its warehouse query failed.
+   `error` is a state name from _warehouse_error() in main.py, never the raw
+   BigQuery message. The data-warehouse-state attribute is what the canary smoke
+   test and health-check.yml look for: keep it, or a broken warehouse passes. #}
+<div class="card p-4 mb-5 border-amber-200 bg-amber-50 text-sm text-amber-800" role="status" data-warehouse-state="{{ error }}">
+    {% if error == "refreshing" %}
+    <p class="font-medium">
+        <span data-lang="en">Data refreshing</span>
+        <span data-lang="es" class="hidden">Actualizando datos</span>
+    </p>
+    <p class="mt-1">
+        <span data-lang="en">The warehouse tables behind this page are being rebuilt. Charts will return once the rebuild finishes; the Methodology page is available in the meantime.</span>
+        <span data-lang="es" class="hidden">Las tablas del almacén de datos detrás de esta página se están reconstruyendo. Las gráficas volverán cuando termine la reconstrucción; mientras tanto puedes consultar la página de Metodología.</span>
+    </p>
+    {% else %}
+    <p class="font-medium">
+        <span data-lang="en">Data temporarily unavailable</span>
+        <span data-lang="es" class="hidden">Datos no disponibles por el momento</span>
+    </p>
+    <p class="mt-1">
+        <span data-lang="en">This page could not reach its data. Try again in a few minutes.</span>
+        <span data-lang="es" class="hidden">Esta página no pudo obtener sus datos. Intenta de nuevo en unos minutos.</span>
+    </p>
+    {% endif %}
+</div>
