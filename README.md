@@ -141,6 +141,9 @@ dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
 - **CI:** [`dbt.yml`](.github/workflows/dbt.yml) lints with sqlfluff, runs `dbt build` on DuckDB on every PR and push to `main`, checks the Airflow DAG parses, and publishes the docs site from `main`. [`dbt-snowflake.yml`](.github/workflows/dbt-snowflake.yml) is a manual run that skips unless the `SNOWFLAKE_*` secrets exist.
 - **Orchestration:** [`airflow/dags/claims_dbt.py`](airflow/dags/claims_dbt.py) runs seed -> snapshot -> run -> test with BashOperator. It is the open-source counterpart to the Dagster pipeline in P02, which stays as it is.
 - **Docs and lineage:** https://gonorandres.github.io/data-engineer-path/
+
+![dbt lineage graph](dbt_claims/docs/lineage.png)
+
 - **Snowflake status:** the profile parses, but the project has not been run against a real Snowflake account yet.
 
 ## Knowledge Base
