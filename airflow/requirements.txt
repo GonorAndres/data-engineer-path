@@ -1,0 +1,9 @@
+# Install with the official constraints file so transitive dependencies resolve
+# (Airflow pins hundreds of packages and plain `pip install` often breaks):
+#
+#   pip install -r requirements.txt \
+#     --constraint https://raw.githubusercontent.com/apache/airflow/constraints-3.1.0/constraints-3.12.txt
+#
+# Use the constraints file that matches your Airflow and Python versions.
+apache-airflow==3.1.0
+apache-airflow-providers-standard==1.8.0

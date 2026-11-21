@@ -1,0 +1,148 @@
+version: 2
+
+# Seeds are CSV files dbt loads as tables. column_types is explicit so DuckDB
+# and Snowflake type the columns identically (no type inference).
+seeds:
+  - name: raw_claims
+    description: "Raw claims CSV (synthetic). One row per claim, as loaded from the source system."
+    config:
+      column_types:
+        claim_id: integer
+        policy_id: integer
+        claim_number: varchar
+        accident_date: date
+        report_date: date
+        close_date: date
+        claim_status: varchar
+        cause_of_loss: varchar
+        initial_reserve: decimal(18,2)
+        current_reserve: decimal(18,2)
+    columns:
+      - name: claim_id
+        description: "Claim identifier."
+      - name: policy_id
+        description: "Policy the claim was made against."
+      - name: claim_number
+        description: "Human-readable claim number."
+      - name: accident_date
+        description: "Date of loss."
+      - name: report_date
+        description: "Date the claim was reported."
+      - name: close_date
+        description: "Date the claim was closed. Null while open."
+      - name: claim_status
+        description: "Claim status as loaded (open, closed, reopened, denied)."
+      - name: cause_of_loss
+        description: "Cause of loss label."
+      - name: initial_reserve
+        description: "Case reserve set when the claim was opened."
+      - name: current_reserve
+        description: "Outstanding case reserve at the latest valuation."
+
+  - name: raw_policies
+    description: "Raw policies CSV (synthetic). One row per policy."
+    config:
+      column_types:
+        policy_id: integer
+        policyholder_id: integer
+        policy_number: varchar
+        coverage_type: varchar
+        effective_date: date
+        expiration_date: date
+        annual_premium: decimal(18,2)
+        deductible: decimal(18,2)
+        coverage_limit: decimal(18,2)
+        status: varchar
+    columns:
+      - name: policy_id
+        description: "Policy identifier."
+      - name: policyholder_id
+        description: "Policyholder (the insured) who owns the policy."
+      - name: policy_number
+        description: "Human-readable policy number."
+      - name: coverage_type
+        description: "Coverage type, the line of business (auto, home, health, liability, life)."
+      - name: effective_date
+        description: "First day of cover."
+      - name: expiration_date
+        description: "End of cover."
+      - name: annual_premium
+        description: "Annual premium for the policy term."
+      - name: deductible
+        description: "Deductible amount."
+      - name: coverage_limit
+        description: "Maximum covered amount."
+      - name: status
+        description: "Policy status (active, renewed, expired, cancelled)."
+
+  - name: raw_policyholders
+    description: "Raw policyholders CSV (synthetic). One row per policyholder (the insured)."
+    config:
+      column_types:
+        policyholder_id: integer
+        first_name: varchar
+        last_name: varchar
+        date_of_birth: date
+        gender: varchar
+        state_code: varchar
+        city: varchar
+        occupation: varchar
+        registration_date: date
+    columns:
+      - name: policyholder_id
+        description: "Policyholder identifier."
+      - name: first_name
+        description: "Given name."
+      - name: last_name
+        description: "Family name."
+      - name: date_of_birth
+        description: "Date of birth."
+      - name: gender
+        description: "Gender code as loaded."
+      - name: state_code
+        description: "Mexican state abbreviation (for example CDMX, JAL, NL)."
+      - name: city
+        description: "City of residence."
+      - name: occupation
+        description: "Occupation label."
+      - name: registration_date
+        description: "Date the policyholder was registered."
+
+  - name: raw_coverages
+    description: "Raw coverage reference CSV. Five rows, one per coverage type."
+    config:
+      column_types:
+        coverage_type: varchar
+        coverage_category: varchar
+        description: varchar
+    columns:
+      - name: coverage_type
+        description: "Coverage type code."
+      - name: coverage_category
+        description: "Category the coverage belongs to."
+      - name: description
+        description: "Free-text description of the coverage."
+
+  - name: raw_claim_payments
+    description: "Raw claim payments CSV (synthetic). One row per payment; recoveries are negative amounts."
+    config:
+      column_types:
+        payment_id: integer
+        claim_id: integer
+        payment_date: date
+        payment_amount: decimal(18,2)
+        payment_type: varchar
+        cumulative_paid: decimal(18,2)
+    columns:
+      - name: payment_id
+        description: "Payment identifier."
+      - name: claim_id
+        description: "Claim the payment belongs to."
+      - name: payment_date
+        description: "Date of the payment."
+      - name: payment_amount
+        description: "Amount paid. Negative for recoveries."
+      - name: payment_type
+        description: "indemnity, expense or recovery."
+      - name: cumulative_paid
+        description: "Running total paid for the claim as supplied by the source."

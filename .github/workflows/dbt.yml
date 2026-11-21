@@ -1,0 +1,130 @@
+# =============================================================================
+# dbt on DuckDB: lint, build, test, publish docs
+# =============================================================================
+# The dbt project in dbt_claims/ is a port of P01's Dataform warehouse that runs
+# on DuckDB, an in-process database, so CI needs no cloud account or secrets.
+#
+#   lint     sqlfluff over the dbt SQL (dialect duckdb)
+#   build    dbt build = seeds, snapshot, models and every test, in DAG order,
+#            from an empty database. Any failing test fails the job.
+#   airflow  imports the Airflow DAG to prove it parses
+#   docs     on main only: publish `dbt docs generate` output to GitHub Pages
+#
+# It runs on every PR, not just ones touching dbt_claims/, because the job is
+# about a minute and a path filter would make it unusable as a required check.
+# =============================================================================
+name: dbt
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dbt-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: dbt_claims
+
+env:
+  DBT_PROFILES_DIR: ${{ github.workspace }}/dbt_claims
+  DBT_TARGET: duckdb
+
+jobs:
+  lint:
+    name: sqlfluff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt_claims/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: dbt deps
+      - run: sqlfluff lint models snapshots tests macros analyses
+
+  build:
+    name: dbt build (DuckDB)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt_claims/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: dbt deps
+      - name: dbt build
+        run: dbt build --target duckdb --fail-fast
+      # The seeds are a fixed synthetic extract, so freshness always warns.
+      # It runs to prove the checks are wired; it is not a gate.
+      - name: dbt source freshness (informational)
+        run: dbt source freshness --target duckdb || true
+      - name: dbt docs generate
+        run: dbt docs generate --target duckdb
+      - name: Package docs site
+        run: |
+          mkdir -p ../site
+          cp target/index.html target/manifest.json target/catalog.json ../site/
+          touch ../site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  airflow:
+    name: Airflow DAG parses
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: airflow
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: airflow/requirements.txt
+      - name: Install Airflow with its constraints file
+        run: |
+          AIRFLOW_VERSION=$(sed -n 's/^apache-airflow==\([0-9.]*\).*/\1/p' requirements.txt)
+          pip install "apache-airflow==${AIRFLOW_VERSION}" \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-${AIRFLOW_VERSION}/constraints-3.12.txt"
+      - name: Import the DAG
+        env:
+          AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+          AIRFLOW__CORE__DAGS_FOLDER: ${{ github.workspace }}/airflow/dags
+        run: |
+          export AIRFLOW_HOME="$RUNNER_TEMP/airflow"
+          airflow db migrate >/dev/null
+          python - <<'EOF'
+          from airflow.models import DagBag
+          bag = DagBag(dag_folder="dags", include_examples=False)
+          assert not bag.import_errors, bag.import_errors
+          dag = bag.get_dag("claims_dbt")
+          assert dag is not None, "claims_dbt not found"
+          print("claims_dbt tasks:", dag.task_ids)
+          EOF
+
+  docs:
+    name: Publish dbt docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, build]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

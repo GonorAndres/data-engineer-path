@@ -84,10 +84,19 @@
             </div>
 
             <div class="px-5 py-3 border-t border-white/[0.06] text-[11px] text-slate-500 space-y-1">
+                {# Only claim a connection when this page's query actually succeeded.
+                   health-check.yml and the canary smoke test grep for "BigQuery Connected". #}
+                {% if error %}
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span data-lang="en">Data refreshing</span><span data-lang="es" class="hidden">Actualizando datos</span>
+                </div>
+                {% else %}
                 <div class="flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span data-lang="en">BigQuery Connected</span><span data-lang="es" class="hidden">BigQuery Conectado</span>
                 </div>
+                {% endif %}
                 <div>us-central1 &middot; Cloud Run</div>
             </div>
         </aside>

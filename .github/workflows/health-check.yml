@@ -59,7 +59,7 @@ jobs:
             echo "::error title=Warehouse unreachable::the dashboard is up but not reporting BigQuery Connected"
             exit 1
           fi
-          if printf '%s' "$BODY" | grep -qE "Could not load KPI|Not found: Table"; then
+          if printf '%s' "$BODY" | grep -qE "data-warehouse-state|Could not load KPI|Not found: Table"; then
             echo "::error title=Warehouse errors::the dashboard is rendering query failures"
             exit 1
           fi

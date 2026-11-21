@@ -13,7 +13,8 @@ set -euo pipefail
 
 PROJECT_ID="${1:?Usage: bash scripts/setup_gcp.sh PROJECT_ID}"
 REGION="us-central1"
-BUCKET_NAME="${PROJECT_ID}-claims-data"
+# Matches the live bucket (gs://dev-claims-data-<PROJECT_ID>) and P04 Terraform.
+BUCKET_NAME="dev-claims-data-${PROJECT_ID}"
 
 echo "=== Setting up GCP project: ${PROJECT_ID} ==="
 gcloud config set project "${PROJECT_ID}"
@@ -55,10 +56,14 @@ echo "Sample data uploaded to gs://${BUCKET_NAME}/raw/"
 echo ""
 echo "--- Creating BigQuery datasets ---"
 for DATASET in dev_claims_raw dev_claims_staging dev_claims_intermediate dev_claims_analytics dev_claims_reports dev_claims_assertions; do
-    bq --project_id="${PROJECT_ID}" mk --dataset --location=US \
-        --default_table_expiration 0 \
+    bq --project_id="${PROJECT_ID}" mk --dataset --location="${REGION}" \
         --description "Claims warehouse: ${DATASET}" \
         "${PROJECT_ID}:${DATASET}" 2>/dev/null || echo "  ${DATASET} already exists"
+    # Run unconditionally, not as an mk flag: when the dataset already exists
+    # (e.g. created by P04 Terraform) mk fails and a flag on it never applies.
+    # A default expiry is what deleted every table on 2026-09-13, exactly 30
+    # days after the 2026-08-14 rebuild.
+    bq update --default_table_expiration 0 "${PROJECT_ID}:${DATASET}" >/dev/null
 done
 echo "Datasets created."
 
@@ -66,7 +71,7 @@ echo "Datasets created."
 echo ""
 echo "--- Loading raw data into BigQuery ---"
 for CSV in policyholders policies claims claim_payments; do
-    bq load --autodetect --source_format=CSV \
+    bq load --location="${REGION}" --replace --autodetect --source_format=CSV \
         --max_bad_records=0 \
         "${PROJECT_ID}:dev_claims_raw.raw_${CSV}" \
         "gs://${BUCKET_NAME}/raw/${CSV}.csv"
@@ -78,7 +83,7 @@ done
 # header as a row and names the columns string_field_0..2. stg_coverages then
 # fails with "Unrecognized name: coverage_type" and takes the 10 downstream
 # models with it. Declare the schema instead.
-bq load --source_format=CSV --skip_leading_rows=1 \
+bq load --location="${REGION}" --replace --source_format=CSV --skip_leading_rows=1 \
     --max_bad_records=0 \
     "${PROJECT_ID}:dev_claims_raw.raw_coverages" \
     "gs://${BUCKET_NAME}/raw/coverages.csv" \
