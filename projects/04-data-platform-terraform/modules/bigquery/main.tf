@@ -9,8 +9,9 @@
 #   5. claims_reports     -- Analytical reports (rpt_loss_triangle, etc.)
 #
 # Environment behavior:
-#   dev:  Prefixed with "dev_", tables expire after 30 days
-#   prod: No prefix, no expiration, prevent_destroy enabled
+#   dev:  Prefixed with "dev_"
+#   prod: No prefix, prevent_destroy enabled
+#   Neither expires tables by default -- see default_table_expiration_ms below.
 #
 # Cost: $0 for empty datasets. $0.02/GB/month for stored data.
 #        First 10 GB of storage is free.
@@ -36,8 +37,14 @@ locals {
     }
   }
 
-  # Dev tables expire after 30 days to avoid cost accumulation
-  default_table_expiration_ms = var.environment == "dev" ? 2592000000 : null # 30 days in ms
+  # Dev tables used to expire after 30 days "to avoid cost accumulation". That
+  # deleted the live dashboard's warehouse: the dev_ datasets are what
+  # data-engineer.gonor.me reads, and BigQuery stamps the expiry on each table
+  # at creation. The 2026-08-14 rebuild expired on 2026-09-13 and the public
+  # dashboard showed "Not found: Table ...fct_claims" until 2026-11-21.
+  # The whole warehouse is ~300 KiB, inside the 10 GB free storage tier, so
+  # the expiry saved nothing. It is now opt-in.
+  default_table_expiration_ms = var.default_table_expiration_ms
 }
 
 # -----------------------------------------------------------------------------
@@ -52,7 +59,6 @@ resource "google_bigquery_dataset" "datasets" {
   location    = var.region
   description = "${each.value.description} [${var.environment}]"
 
-  # Dev: tables expire after 30 days. Prod: no expiration.
   default_table_expiration_ms = local.default_table_expiration_ms
 
   labels = merge(var.common_labels, {
