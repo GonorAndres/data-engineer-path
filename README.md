@@ -123,6 +123,8 @@ These are not 6 isolated projects -- they form one integrated insurance data pla
 
 ## dbt + DuckDB / Snowflake
 
+New here? [The Claims Pipeline, Explained End to End](docs/architecture/claims-pipeline-explained.md) walks through every stage, why it exists, which engine runs it today, and the real insurance questions it answers.
+
 [`dbt_claims/`](dbt_claims/) is the P01 warehouse ported from Dataform to dbt: same models, same names, same numbers (reconciled against BigQuery: 608 claims, 26,944,733.19 paid, 738 exposure rows). It runs on DuckDB, a database that lives in a single local file, so it needs no cloud account; the same project targets Snowflake by switching the dbt profile.
 
 ```bash
