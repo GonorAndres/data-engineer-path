@@ -31,7 +31,7 @@ import argparse
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Union
 
 import apache_beam as beam
 from apache_beam import window
@@ -80,7 +80,7 @@ class ParseClaim(beam.DoFn):
 
     DEAD_LETTER_TAG = "dead_letter"
 
-    def process(self, element: dict[str, Any]):
+    def process(self, element: Union[bytes, str, dict[str, Any]]):
         try:
             # If element is a BQ row, it's already a dict
             if isinstance(element, bytes):
@@ -114,7 +114,7 @@ class ParseClaim(beam.DoFn):
 class ExtractCoverageKey(beam.DoFn):
     """Extract (coverage_type, estimated_amount) key-value pairs."""
 
-    def process(self, element: dict[str, Any]):
+    def process(self, element: Union[bytes, str, dict[str, Any]]):
         coverage = element.get("coverage_type", "unknown")
         amount = float(element.get("estimated_amount", 0))
         yield (coverage, amount)
