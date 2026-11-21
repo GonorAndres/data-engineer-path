@@ -2,7 +2,11 @@
 
 A dbt port of the Dataform warehouse in `projects/01-claims-warehouse`. Same models, same names, same business logic, but it runs locally on DuckDB by default and can target Snowflake. The data is the synthetic claims sample from `projects/01-claims-warehouse/data/sample_data/`, copied here as seeds.
 
+![Lineage graph: seeds on the left flow through staging, intermediate and marts to reports and the KPI mart on the right](docs/lineage.png)
+
 Model docs and the lineage graph (built by CI from `main`): https://gonorandres.github.io/data-engineer-path/ (open the graph icon, bottom right, for the full lineage).
+
+In the graph, the green nodes at the bottom left are the `raw` sources. They exist only for freshness checks, so nothing depends on them; staging reads the seeds (`raw_*`, top left) instead. `reconcile_bigquery` is an analysis (a saved query), not a table.
 
 ## Run it locally
 
